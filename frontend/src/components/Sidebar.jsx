@@ -19,7 +19,7 @@ import {
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { user, hasPermission } = useAuth();
   const { t } = useLanguage();
-  const [openMenus, setOpenMenus] = useState({ Leave: true });
+  const [openMenus, setOpenMenus] = useState({ Leave: true, Department: true });
 
   const menuItems = [
     {
@@ -28,16 +28,21 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       icon: HomeIcon,
     },
     {
-      path: "/departments",
+      key: "Department",
       name: t("departments"),
       icon: BuildingOfficeIcon,
-      resource: "departments",
-    },
-    {
-      path: "/positions",
-      name: t("positions"),
-      icon: BriefcaseIcon,
-      resource: "positions",
+      subItems: [
+        {
+          path: "/departments",
+          name: t("departments"),
+          resource: "departments",
+        },
+        {
+          path: "/positions",
+          name: t("positions"),
+          resource: "positions",
+        },
+      ]
     },
     {
       path: "/employees",
