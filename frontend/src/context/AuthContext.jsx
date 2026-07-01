@@ -50,6 +50,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithQR = async (qrToken) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/login-qr', { qrToken });
+      const { token: receivedToken, user: receivedUser } = response.data;
+      
+      localStorage.setItem('token', receivedToken);
+      setToken(receivedToken);
+      setUser(receivedUser);
+      return { success: true };
+    } catch (error) {
+      console.error('QR Login request failed:', error);
+      const errMsg = error.response?.data?.message || 'QR Login failed';
+      return { success: false, message: errMsg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -68,7 +87,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole, hasPermission }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginWithQR, logout, hasRole, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

@@ -23,8 +23,8 @@ const Permissions = () => {
     { key: 'delete_attendance', label: 'Delete Attendance Logs (លុបវត្តមាន)' },
     { key: 'leaves', label: 'Leaves approval (ច្បាប់ឈប់សម្រាក)' },
     { key: 'reports', label: 'Reports view (របាយការណ៍)' },
-    { key: 'kiosk', label: 'Kiosk Entrance mode (ម៉ាស៊ីនស្កេន)' },
-    { key: 'kiosk_settings', label: 'Kiosk Geofencing (កំណត់ទីតាំងស្កេន)' },
+    { key: 'kiosk', label: 'Facescan Mode (ម៉ាស៊ីនស្កេនផ្ទៃមុខ)' },
+    { key: 'kiosk_settings', label: 'Branch Settings (កំណត់ទីតាំងសាខា)' },
     { key: 'leave_types', label: 'Leave Types Configuration (កំណត់ប្រភេទច្បាប់)' },
     { key: 'leave_allowances', label: 'Leave Allowances Configuration (កំណត់ចំនួនច្បាប់បុគ្គលិក)' },
     { key: 'work_hours', label: 'Company Work Hours (កំណត់ម៉ោងការងារក្រុមហ៊ុន)' }

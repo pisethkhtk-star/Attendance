@@ -4,6 +4,24 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { MagnifyingGlassIcon, CalendarIcon, PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
+export const formatTime12Hour = (timeStr) => {
+  if (!timeStr) return '-';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  
+  if (isNaN(hours)) return timeStr;
+  
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  
+  const formattedHours = String(hours).padStart(2, '0');
+  return `${formattedHours}:${minutes} ${ampm}`;
+};
+
 const Attendance = () => {
   const { user, hasPermission } = useAuth();
   const { t, getLocalizedName } = useLanguage();
@@ -214,6 +232,54 @@ const Attendance = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (logs.length === 0) return;
+
+    const headers = [
+      'Staff ID',
+      'Employee Name (EN)',
+      'Employee Name (KH)',
+      'Department',
+      'Date',
+      'Check-in 1',
+      'Check-out 1',
+      'Check-in 2',
+      'Check-out 2',
+      'Is Late',
+      'Is Early Leave',
+      'Note'
+    ];
+
+    const rows = logs.map(log => [
+      log.employee.staffId,
+      log.employee.nameEn,
+      log.employee.nameKh,
+      log.employee.department.nameEn,
+      new Date(log.attendanceDate).toLocaleDateString(),
+      formatTime12Hour(log.checkin1).replace('-', ''),
+      formatTime12Hour(log.checkout1).replace('-', ''),
+      formatTime12Hour(log.checkin2).replace('-', ''),
+      formatTime12Hour(log.checkout2).replace('-', ''),
+      log.isLate ? 'YES' : 'NO',
+      log.isEarlyLeave ? 'YES' : 'NO',
+      log.note || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Attendance_Log_${startDate}_to_${endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const fetchMetadata = async () => {
     try {
       if (user.role !== 'Employee') {
@@ -241,15 +307,25 @@ const Attendance = () => {
           <h2 className="text-xl font-bold text-white font-khmer">{t("attendance")}</h2>
           <p className="text-slate-400 text-xs mt-1">Review check-in history logs and shifts compliance</p>
         </div>
-        {hasPermission('add_attendance') && (
+        <div className="flex gap-2">
           <button
-            onClick={handleOpenAddModal}
-            className="py-2.5 px-5 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer flex items-center gap-2"
+            onClick={handleExportCSV}
+            disabled={logs.length === 0}
+            className="py-2.5 px-4 text-xs font-semibold bg-slate-800 hover:bg-slate-700 hover:border-white/20 border border-white/10 text-white rounded-xl transition-all cursor-pointer outline-none flex items-center gap-2 font-khmer disabled:opacity-50"
           >
-            <PlusIcon className="h-4 w-4" />
-            <span>Add Attendance</span>
+            <span>📥 {t("exportExcel")}</span>
           </button>
-        )}
+          
+          {hasPermission('add_attendance') && (
+            <button
+              onClick={handleOpenAddModal}
+              className="py-2.5 px-5 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer flex items-center gap-2"
+            >
+              <PlusIcon className="h-4 w-4" />
+              <span>Add Attendance</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter panel */}
@@ -362,10 +438,10 @@ const Attendance = () => {
                           </div>
                         </td>
                       )}
-                      <td className="py-4 px-6">{log.checkin1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkin2 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout2 || '-'}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin2)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout2)}</td>
                       <td className="py-4 px-6 space-y-1">
                         {log.isLate && (
                           <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300 ring-1 ring-inset ring-amber-500/20 font-khmer">

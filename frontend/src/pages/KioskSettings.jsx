@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../utils/api';
-import { MapPinIcon, CheckCircleIcon, ArrowPathIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, CheckCircleIcon, ArrowPathIcon, TrashIcon, PlusIcon, XMarkIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 
 // Fix default Leaflet marker icon broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -47,6 +47,12 @@ const KioskSettings = () => {
   const [markerPos, setMarkerPos] = useState([11.5564, 104.9282]);
   const [radius, setRadius] = useState(100);
 
+  // Branch QR Code States
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrBranch, setQrBranch] = useState(null);
+  const [branchQrImage, setBranchQrImage] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+
   // States
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -85,6 +91,23 @@ const KioskSettings = () => {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  const handleViewBranchQr = async (branch, e) => {
+    e.stopPropagation();
+    setQrBranch(branch);
+    setShowQrModal(true);
+    setQrLoading(true);
+    setBranchQrImage('');
+    try {
+      const res = await api.get(`/kiosk-settings/${branch.id}/qrcode`);
+      setBranchQrImage(res.data.qrImage);
+    } catch (err) {
+      console.error('Error fetching branch QR:', err);
+      alert('Failed to load branch QR code');
+    } finally {
+      setQrLoading(false);
+    }
+  };
 
   // Handle Map clicks to move/set active coordinates
   const handleMapClick = useCallback((lat, lng) => {
@@ -244,7 +267,7 @@ const KioskSettings = () => {
             <MapPinIcon className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-khmer">ការកំណត់ Kiosk Geofencing</h1>
+            <h1 className="text-xl font-bold text-white font-khmer">ការកំណត់សាខា (Branch Settings)</h1>
             <p className="text-xs text-slate-400 mt-0.5 font-khmer">
               គ្រប់គ្រងទីតាំង Geofences និងកម្រិតកាំ (Radius) សម្រាប់គណនាវត្តមានតាមសាខាផ្សេងៗ។
             </p>
@@ -435,18 +458,28 @@ const KioskSettings = () => {
                       </p>
                     </div>
                     
-                    <button
-                      onClick={(e) => handleDelete(s.id, e)}
-                      disabled={deletingId === s.id}
-                      className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
-                      title="Delete geofence"
-                    >
-                      {deletingId === s.id ? (
-                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <TrashIcon className="h-4 w-4" />
-                      )}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => handleViewBranchQr(s, e)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="View Branch QR Code"
+                      >
+                        <QrCodeIcon className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => handleDelete(s.id, e)}
+                        disabled={deletingId === s.id}
+                        className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                        title="Delete geofence"
+                      >
+                        {deletingId === s.id ? (
+                          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <TrashIcon className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -594,6 +627,105 @@ const KioskSettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Branch QR Modal */}
+      {showQrModal && qrBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="glass-card max-w-md w-full p-6 border border-white/10 rounded-3xl space-y-6 shadow-2xl relative bg-slate-900">
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer border-none bg-transparent outline-none"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-white font-khmer">QR Code សាខា / Branch QR Code</h3>
+              <p className="text-sm font-semibold text-indigo-400 font-khmer">{qrBranch.name}</p>
+            </div>
+
+            <div className="flex flex-col items-center justify-center p-6 bg-slate-950/40 border border-white/5 rounded-2xl relative min-h-[220px]">
+              {qrLoading ? (
+                <div className="flex flex-col items-center gap-3 text-slate-400">
+                  <ArrowPathIcon className="h-8 w-8 animate-spin text-indigo-400" />
+                  <span className="text-xs font-khmer">Generating QR Code...</span>
+                </div>
+              ) : branchQrImage ? (
+                <>
+                  <img src={branchQrImage} alt="Branch QR" className="w-48 h-48 rounded-xl border border-white/10 bg-white p-2" />
+                  <p className="text-[10px] text-slate-500 mt-4 select-all font-mono">
+                    {`branch_qr:${qrBranch.id}`}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-rose-300 font-khmer">កំហុសក្នុងការបង្កើត QR Code / Error generating QR Code</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  printWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>Print QR Code - ${qrBranch.name}</title>
+                        <style>
+                          body {
+                            font-family: 'Inter', sans-serif;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 90vh;
+                            margin: 0;
+                            text-align: center;
+                          }
+                          .container {
+                            border: 3px solid #6366f1;
+                            border-radius: 24px;
+                            padding: 40px;
+                            background: #fff;
+                          }
+                          h1 { margin: 0 0 10px 0; color: #1e1b4b; font-size: 28px; }
+                          h2 { margin: 0 0 20px 0; color: #4f46e5; font-size: 20px; }
+                          img { width: 300px; height: 300px; }
+                          p { margin-top: 20px; color: #64748b; font-size: 14px; }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="container">
+                          <h1>${qrBranch.name}</h1>
+                          <h2>ស្កេនដើម្បីចុះវត្តមាន / Scan to Check-in</h2>
+                          <img src="${branchQrImage}" />
+                          <p>ប្រព័ន្ធគ្រប់គ្រងវត្តមានបុគ្គលិក Kiosk Attendance</p>
+                        </div>
+                        <script>
+                          window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); };
+                          }
+                        </script>
+                      </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                }}
+                disabled={!branchQrImage}
+                className="flex-1 py-3 px-4 font-bold text-xs rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer outline-none border-none disabled:opacity-50 flex items-center justify-center gap-2 font-khmer shadow-lg shadow-indigo-500/25"
+              >
+                🖨️ បោះពុម្ព QR (Print QR)
+              </button>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="py-3 px-5 font-bold text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer outline-none border border-white/5 font-khmer"
+              >
+                បិទ (Close)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

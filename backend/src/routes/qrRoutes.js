@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { generateQRCode, scanQRCode } from '../controllers/qrController.js';
+import { generateQRCode, scanQRCode, scanBranchQRCode } from '../controllers/qrController.js';
+import { protect } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ const scanLimiter = rateLimit({
 
 router.get('/generate/:staffId', generateQRCode);
 router.post('/scan', scanLimiter, scanQRCode);
+router.post('/scan-branch', protect, scanLimiter, scanBranchQRCode);
 
 export default router;

@@ -9,6 +9,7 @@ import {
   ExclamationCircleIcon,
   CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
+import { formatTime12Hour } from './Attendance';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -187,25 +188,25 @@ const Dashboard = () => {
               <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl">
                 <p className="text-slate-400 font-medium font-khmer">{t("checkin1")}</p>
                 <p className={`font-bold mt-1 ${personalTodayLog?.checkin1 ? 'text-indigo-400' : 'text-slate-600'}`}>
-                  {personalTodayLog?.checkin1 || t("notLogged")}
+                  {personalTodayLog?.checkin1 ? formatTime12Hour(personalTodayLog.checkin1) : t("notLogged")}
                 </p>
               </div>
               <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl">
                 <p className="text-slate-400 font-medium font-khmer">{t("checkout1")}</p>
                 <p className={`font-bold mt-1 ${personalTodayLog?.checkout1 ? 'text-indigo-400' : 'text-slate-600'}`}>
-                  {personalTodayLog?.checkout1 || t("notLogged")}
+                  {personalTodayLog?.checkout1 ? formatTime12Hour(personalTodayLog.checkout1) : t("notLogged")}
                 </p>
               </div>
               <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl">
                 <p className="text-slate-400 font-medium font-khmer">{t("checkin2")}</p>
                 <p className={`font-bold mt-1 ${personalTodayLog?.checkin2 ? 'text-indigo-400' : 'text-slate-600'}`}>
-                  {personalTodayLog?.checkin2 || t("notLogged")}
+                  {personalTodayLog?.checkin2 ? formatTime12Hour(personalTodayLog.checkin2) : t("notLogged")}
                 </p>
               </div>
               <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl">
                 <p className="text-slate-400 font-medium font-khmer">{t("checkout2")}</p>
                 <p className={`font-bold mt-1 ${personalTodayLog?.checkout2 ? 'text-indigo-400' : 'text-slate-600'}`}>
-                  {personalTodayLog?.checkout2 || t("notLogged")}
+                  {personalTodayLog?.checkout2 ? formatTime12Hour(personalTodayLog.checkout2) : t("notLogged")}
                 </p>
               </div>
             </div>
@@ -311,10 +312,10 @@ const Dashboard = () => {
                           </p>
                         </div>
                       </td>
-                      <td className="py-4 px-6">{log.checkin1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkin2 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout2 || '-'}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin2)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout2)}</td>
                       <td className="py-4 px-6 space-y-1">
                         {log.isLate && (
                           <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300 ring-1 ring-inset ring-amber-500/20 font-khmer">

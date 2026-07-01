@@ -90,13 +90,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
     {
       path: "/kiosk",
-      name: "Kiosk Mode",
+      name: t("facescan"),
       icon: ComputerDesktopIcon,
       resource: "kiosk",
     },
     {
       path: "/kiosk-settings",
-      name: "Kiosk Geofencing",
+      name: t("branchSetting"),
       icon: MapPinIcon,
       resource: "kiosk_settings",
     },

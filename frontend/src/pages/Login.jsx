@@ -1,16 +1,94 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ClockIcon } from '@heroicons/react/24/outline';
 import { Navigate } from 'react-router-dom';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const Login = () => {
-  const { user, login } = useAuth();
+  const { user, login, loginWithQR } = useAuth();
   const { t, locale, setLocale } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // QR Login States & References
+  const [loginMode, setLoginMode] = useState('password'); // password, qrcode
+  const [qrError, setQrError] = useState('');
+  const [scanLock, setScanLock] = useState(false);
+  const qrScannerRef = useRef(null);
+
+  const startQrScanner = () => {
+    setQrError('');
+    const html5Qrcode = new Html5Qrcode("login-qr-reader");
+    qrScannerRef.current = html5Qrcode;
+
+    const config = { fps: 10, qrbox: { width: 180, height: 180 } };
+    html5Qrcode.start(
+      { facingMode: "user" },
+      config,
+      async (decodedText) => {
+        handleQrLogin(decodedText);
+      },
+      () => {
+        // quiet
+      }
+    ).catch(err => {
+      console.error("QR scanner start error:", err);
+      setQrError("Failed to access camera for QR Code Scanner");
+    });
+  };
+
+  const stopQrScanner = async () => {
+    if (qrScannerRef.current) {
+      try {
+        if (qrScannerRef.current.isScanning) {
+          await qrScannerRef.current.stop();
+        }
+      } catch (err) {
+        console.error("QR scanner stop error:", err);
+      }
+      qrScannerRef.current = null;
+    }
+  };
+
+  const handleQrLogin = async (decodedText) => {
+    if (scanLock) return;
+    setScanLock(true);
+    setQrError('');
+    
+    // Stop scanner temporary during verification
+    await stopQrScanner();
+
+    const result = await loginWithQR(decodedText);
+    if (!result.success) {
+      setQrError(result.message);
+      setScanLock(false);
+      // Restart scanner after 2 seconds
+      setTimeout(() => {
+        setScanLock(false);
+        if (qrScannerRef.current === null) {
+          startQrScanner();
+        }
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (loginMode === 'qrcode') {
+      const timer = setTimeout(() => {
+        startQrScanner();
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      stopQrScanner();
+    }
+
+    return () => {
+      stopQrScanner();
+    };
+  }, [loginMode]);
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -54,53 +132,102 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Form */}
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {errorMsg && (
-              <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-300 text-center font-khmer">
-                {errorMsg}
-              </div>
-            )}
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-khmer">
-                  {t("email")}
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 py-3 px-4 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all outline-none"
-                  placeholder="name@attendance.com"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-khmer">
-                  {t("password")}
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 py-3 px-4 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
+          {/* Login Mode Tabs */}
+          <div className="flex border-b border-white/10 mt-6 w-full">
+            <button
+              type="button"
+              onClick={() => setLoginMode('password')}
+              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${
+                loginMode === 'password'
+                  ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🔑 {locale === 'kh' ? 'លេខសម្ងាត់' : 'Password'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMode('qrcode')}
+              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${
+                loginMode === 'qrcode'
+                  ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              📷 {locale === 'kh' ? 'ស្កេន QR Code' : 'QR Scan'}
+            </button>
+          </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="group relative flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 px-4 text-sm font-semibold text-white hover:from-indigo-600 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 transition-all font-khmer shadow-lg shadow-indigo-500/25 disabled:opacity-50"
-              >
-                {submitting ? t("loading") : (locale === 'kh' ? 'ចូលប្រព័ន្ធ' : 'Sign In')}
-              </button>
+          {loginMode === 'password' ? (
+            /* Form */
+            <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
+              {errorMsg && (
+                <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-300 text-center font-khmer">
+                  {errorMsg}
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-khmer">
+                    {t("email")}
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 py-3 px-4 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all outline-none"
+                    placeholder="name@attendance.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-khmer">
+                    {t("password")}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 py-3 px-4 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="group relative flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 px-4 text-sm font-semibold text-white hover:from-indigo-600 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 transition-all font-khmer shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+                >
+                  {submitting ? t("loading") : (locale === 'kh' ? 'ចូលប្រព័ន្ធ' : 'Sign In')}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* QR Scanner view */
+            <div className="mt-6 flex flex-col items-center">
+              <div className="relative w-full aspect-square max-w-[240px] rounded-2xl border border-white/10 bg-slate-950 overflow-hidden shadow-inner flex items-center justify-center">
+                <div className="absolute inset-0 pointer-events-none border border-dashed border-indigo-500/30 m-4 rounded-xl flex items-center justify-center animate-pulse z-10">
+                  <div className="w-28 h-28 border border-indigo-500/20 rounded-lg"></div>
+                </div>
+                <div id="login-qr-reader" className="w-full h-full object-cover [&_video]:object-cover [&_video]:w-full [&_video]:h-full" />
+              </div>
+
+              {qrError && (
+                <div className="mt-4 w-full rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-300 text-center font-khmer">
+                  ⚠️ {qrError}
+                </div>
+              )}
+
+              <div className="mt-4 text-[11px] font-semibold text-slate-400 font-khmer flex gap-2 items-center">
+                <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+                <span>{locale === 'kh' ? "សូមបង្ហាញកូដ QR ផ្ទាល់ខ្លួនរបស់លោកអ្នក" : "Please show your personal QR code badge"}</span>
+              </div>
             </div>
-          </form>
+          )}
 
           {/* Quick Links for Testing */}
           <div className="mt-8 border-t border-white/10 pt-6">

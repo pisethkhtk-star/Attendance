@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   SafeAreaView,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Modal,
+  Image
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -34,6 +36,30 @@ export default function App() {
   const [scanned, setScanned] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null); // { success: boolean, message: string }
+
+  // Personal QR display states
+  const [showMyQrModal, setShowMyQrModal] = useState(false);
+  const [myQrImage, setMyQrImage] = useState('');
+  const [myQrLoading, setMyQrLoading] = useState(false);
+
+  const handleOpenMyQr = async () => {
+    setShowMyQrModal(true);
+    setMyQrLoading(true);
+    setMyQrImage('');
+    try {
+      const res = await axios.get(`${apiUrl}/qrcode/generate/${user.staffId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.qrImage) {
+        setMyQrImage(res.data.qrImage);
+      }
+    } catch (err) {
+      console.error('Error fetching personal QR:', err);
+      Alert.alert('កំហុស', 'មិនអាចទាញយក QR Code ផ្ទាល់ខ្លួនបានទេ។');
+    } finally {
+      setMyQrLoading(false);
+    }
+  };
 
   // Load saved token & API URL on mount
   useEffect(() => {
@@ -149,8 +175,12 @@ export default function App() {
       const { latitude, longitude } = locationRes.coords;
 
       // 2. Send QR scan check-in payload to backend
+      const endpoint = data.startsWith('branch_qr:') 
+        ? `${apiUrl}/qrcode/scan-branch` 
+        : `${apiUrl}/qrcode/scan`;
+
       const response = await axios.post(
-        `${apiUrl}/qrcode/scan`,
+        endpoint,
         {
           qrToken: data,
           deviceInfo: 'Expo Mobile App',
@@ -178,6 +208,7 @@ export default function App() {
         });
       }
     } catch (error) {
+      console.error("Scan Error Response:", error.response?.data);
       console.error(error);
       const errMsg = error.response?.data?.message || 'មានបញ្ហាពេលផ្ញើវត្តមានទៅកាន់ Server។';
       setScanResult({
@@ -259,7 +290,7 @@ export default function App() {
               <Text style={styles.inputLabel}>API Server URL (សម្រាប់ LAN Wifi)</Text>
               <TextInput
                 style={styles.input}
-                placeholder="http://192.168.1.105:5050/api"
+                placeholder="http://10.145.48.140:5050/api"
                 placeholderTextColor="#64748b"
                 value={apiUrl}
                 onChangeText={setApiUrl}
@@ -282,7 +313,7 @@ export default function App() {
                   <Text style={styles.quickRoleText}>Admin</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>admin@attendance.com</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={styles.quickBtn}
                   onPress={() => fillQuickCredentials('hr@attendance.com', 'hr123')}
@@ -290,7 +321,7 @@ export default function App() {
                   <Text style={styles.quickRoleText}>HR</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>hr@attendance.com</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={styles.quickBtn}
                   onPress={() => fillQuickCredentials('manager@attendance.com', 'manager123')}
@@ -298,7 +329,7 @@ export default function App() {
                   <Text style={styles.quickRoleText}>Manager</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>manager@attendance.com</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={styles.quickBtn}
                   onPress={() => fillQuickCredentials('rath@attendance.com', 'emp123')}
@@ -351,12 +382,52 @@ export default function App() {
             </View>
           </View>
 
+          <TouchableOpacity style={styles.myQrBtn} onPress={handleOpenMyQr}>
+            <Text style={styles.myQrBtnText}>👤 បង្ហាញ QR Code ផ្ទាល់ខ្លួន (My QR Code)</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.scanActionBtn} onPress={handleOpenScanner}>
             <Text style={styles.scanActionEmoji}>📷</Text>
             <Text style={styles.scanActionTitle}>ស្កេន QR Code ចុះវត្តមាន</Text>
             <Text style={styles.scanActionDesc}>Scan Check-in / Check-out QR</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Personal QR Modal */}
+        <Modal
+          visible={showMyQrModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowMyQrModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>QR Code ផ្ទាល់ខ្លួន / My QR</Text>
+              <Text style={styles.modalSubtitle}>{user?.nameKh || user?.nameEn}</Text>
+
+              <View style={styles.qrContainer}>
+                {myQrLoading ? (
+                  <ActivityIndicator size="large" color="#6366f1" />
+                ) : myQrImage ? (
+                  <Image source={{ uri: myQrImage }} style={styles.qrImage} />
+                ) : (
+                  <Text style={styles.qrErrorText}>Error loading QR</Text>
+                )}
+              </View>
+
+              <Text style={styles.qrUsageHint}>
+                ប្រើសម្រាប់ស្កេនឡុកចូលប្រព័ន្ធតាមរយៈ Website
+              </Text>
+
+              <TouchableOpacity
+                style={styles.closeModalBtn}
+                onPress={() => setShowMyQrModal(false)}
+              >
+                <Text style={styles.closeModalBtnText}>បិទ (Close)</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -782,6 +853,87 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   closeScannerBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  myQrBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  myQrBtnText: {
+    color: '#a5b4fc',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 28,
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: '#818cf8',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  qrContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  qrImage: {
+    width: 176,
+    height: 176,
+  },
+  qrErrorText: {
+    color: '#ef4444',
+    fontSize: 12,
+  },
+  qrUsageHint: {
+    color: '#94a3b8',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  closeModalBtn: {
+    backgroundColor: '#4f46e5',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  closeModalBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',

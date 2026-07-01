@@ -6,6 +6,7 @@ import {
   PrinterIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
+import { formatTime12Hour } from './Attendance';
 
 const Reports = () => {
   const { t, getLocalizedName } = useLanguage();
@@ -275,10 +276,10 @@ const Reports = () => {
                           </p>
                         </div>
                       </td>
-                      <td className="py-4 px-6">{log.checkin1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout1 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkin2 || '-'}</td>
-                      <td className="py-4 px-6">{log.checkout2 || '-'}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout1)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkin2)}</td>
+                      <td className="py-4 px-6">{formatTime12Hour(log.checkout2)}</td>
                       <td className="py-4 px-6 space-y-1">
                         {log.isLate && (
                           <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300 ring-1 ring-inset ring-amber-500/20 font-khmer">

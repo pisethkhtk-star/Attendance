@@ -250,3 +250,145 @@ export const scanQRCode = async (req, res) => {
     res.status(500).json({ message: 'Server error scanning QR code' });
   }
 };
+
+// GET /api/kiosk-settings/:id/qrcode
+export const getBranchQRCode = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const branch = await prisma.kioskSetting.findUnique({
+      where: { id }
+    });
+
+    if (!branch) {
+      return res.status(404).json({ message: 'Branch location not found' });
+    }
+
+    const token = `branch_qr:${branch.id}`;
+    const qrImage = await QRCodeLib.toDataURL(token);
+
+    res.json({
+      success: true,
+      qrToken: token,
+      qrImage
+    });
+  } catch (error) {
+    console.error('Branch QR generate error:', error);
+    res.status(500).json({ message: 'Server error generating branch QR code' });
+  }
+};
+
+// POST /api/qrcode/scan-branch
+export const scanBranchQRCode = async (req, res) => {
+  const { qrToken, deviceInfo, location, latitude, longitude } = req.body;
+
+  if (!qrToken) {
+    return res.status(400).json({ message: 'QR token is required' });
+  }
+
+  if (!qrToken.startsWith('branch_qr:')) {
+    return res.status(400).json({ success: false, message: 'Invalid Branch QR code format' });
+  }
+
+  const branchId = qrToken.replace('branch_qr:', '');
+  const staffId = req.user.staffId;
+
+  try {
+    const branch = await prisma.kioskSetting.findUnique({
+      where: { id: branchId }
+    });
+
+    if (!branch) {
+      return res.status(400).json({ success: false, message: 'Branch location not found' });
+    }
+
+    const employee = await prisma.employee.findUnique({
+      where: { staffId }
+    });
+
+    if (!employee) {
+      return res.status(400).json({ success: false, message: 'Employee not found' });
+    }
+
+    if (employee.status !== 'Active') {
+      return res.status(403).json({ success: false, message: 'Employee account is inactive' });
+    }
+
+    if (
+      latitude === undefined || 
+      longitude === undefined || 
+      latitude === null || 
+      longitude === null || 
+      isNaN(parseFloat(latitude)) || 
+      isNaN(parseFloat(longitude))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location data (GPS) is required to check-in. សូមបើក Location (GPS) លើឧបករណ៍របស់អ្នក។'
+      });
+    }
+
+    const clientLat = parseFloat(latitude);
+    const clientLng = parseFloat(longitude);
+
+    const employeeBranches = employee.branch
+      ? employee.branch.split(',').map(b => b.trim().toLowerCase())
+      : [];
+
+    if (!employeeBranches.includes(branch.name.toLowerCase())) {
+      return res.status(403).json({
+        success: false,
+        message: `គណនីរបស់អ្នកមិនទាន់ត្រូវបានកំណត់ឱ្យចុះវត្តមាននៅសាខា "${branch.name}" ឡើយ!`
+      });
+    }
+
+    const distance = getHaversineDistance(
+      clientLat, 
+      clientLng, 
+      branch.latitude, 
+      branch.longitude
+    );
+
+    if (distance > branch.radius) {
+      const delta = Math.round(distance - branch.radius);
+      return res.status(403).json({
+        success: false,
+        message: `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone). You are ${delta}m away from the branch "${branch.name}" (limit is ${branch.radius}m).`
+      });
+    }
+
+    const result = await processAttendanceScan({
+      staffId,
+      note: `Auto scan: Branch QR (${branch.name})`
+    });
+
+    await prisma.attendanceLog.create({
+      data: {
+        staffId,
+        method: 'qrcode',
+        action: result.action,
+        status: 'success',
+        deviceInfo: deviceInfo || 'Mobile App',
+        location: branch.name
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Checked in Sok! Action: ${result.action}`,
+      employee: {
+        staffId: result.attendance.employee.staffId,
+        nameEn: result.attendance.employee.nameEn,
+        nameKh: result.attendance.employee.nameKh,
+        department: result.attendance.employee.department.nameEn
+      },
+      action: result.action,
+      timeString: result.timeString
+    });
+
+  } catch (error) {
+    console.error('Branch QR scan check-in error:', error);
+    res.status(500).json({ message: 'Server error during branch QR scan' });
+  }
+};
+

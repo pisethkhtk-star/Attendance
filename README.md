@@ -157,6 +157,35 @@ Frontend runs at: **http://localhost:5173**
 
 ---
 
+### Step 10 — Install Mobile Dependencies (Expo)
+
+បើក **terminal ថ្មី** មួយទៀត / Open a **new terminal tab/window**:
+
+```bash
+cd mobile
+npm install
+```
+
+---
+
+### Step 11 — Start Mobile Dev Server (Expo)
+
+```bash
+# Windows
+npm.cmd start
+
+# macOS / Linux
+npm start
+```
+
+**របៀបដំណើរការលើទូរស័ព្ទ / Running on mobile device:**
+1. ដំឡើងកម្មវិធី **Expo Go** លើទូរស័ព្ទដៃ (iOS App Store ឬ Android Google Play Store) / Install **Expo Go** app on your phone.
+2. ត្រូវប្រាកដថា ទូរស័ព្ទដៃ និងកុំព្យូទ័ររបស់អ្នក **ភ្ជាប់ទៅកាន់ Wi-Fi តែមួយ (Same Network)** / Make sure both devices are on the same Wi-Fi network.
+3. ស្កេន **QR Code** ដែលបង្ហាញលើ Terminal ជាមួយកម្មវិធី Expo Go (សម្រាប់ iOS ប្រើកាមេរ៉ាស្កេនធម្មតា) / Scan the QR code shown in terminal using the Expo Go app (or iOS Camera).
+4. នៅលើផ្ទាំង Login នៃទូរស័ព្ទដៃ សូមវាយបញ្ចូល IP Address របស់កុំព្យូព័រអ្នកទៅក្នុងប្រអប់ **API Server URL** (ឧទាហរណ៍៖ `http://192.168.1.105:5050/api`) / In the Mobile login screen, set the **API Server URL** to your computer's local IP address (e.g. `http://192.168.1.105:5050/api`). You can find your IP by running `ipconfig` (Windows) or `ifconfig` (Mac).
+
+---
+
 ## 🔐 Default Login Accounts
 
 បន្ទាប់ពី seed data ហើយ:
