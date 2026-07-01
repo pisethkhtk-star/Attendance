@@ -74,9 +74,12 @@ export const getByEmployee = async (req, res) => {
 
 // Create leave request
 export const create = async (req, res) => {
-  const { staffId, leaveDate, leaveType, amountDays, reason } = req.body;
+  const { staffId, leaveDate, startDate, endDate, durationType = 'Full Day', leaveType, amountDays, reason } = req.body;
 
-  if (!staffId || !leaveDate || !leaveType || !amountDays) {
+  const resolvedStartDate = startDate || leaveDate;
+  const resolvedEndDate = endDate || leaveDate;
+
+  if (!staffId || !resolvedStartDate || !resolvedEndDate || !leaveType) {
     return res.status(400).json({ message: 'Required fields are missing' });
   }
 
@@ -87,6 +90,29 @@ export const create = async (req, res) => {
     });
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    const start = new Date(resolvedStartDate);
+    const end = new Date(resolvedEndDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'Invalid date formats provided' });
+    }
+    if (start > end) {
+      return res.status(400).json({ message: 'Start date must be before or equal to end date' });
+    }
+
+    const dates = [];
+    let current = new Date(start);
+    while (current <= end) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    let amountDaysPerDay = 1.0;
+    if (durationType === 'Morning' || durationType === 'Afternoon') {
+      amountDaysPerDay = 0.5;
+    } else if (amountDays) {
+      amountDaysPerDay = parseFloat(amountDays) / dates.length;
     }
 
     // Validate leave type and max days limit
@@ -100,9 +126,9 @@ export const create = async (req, res) => {
     });
 
     if (typeInfo) {
-      const targetYear = new Date(leaveDate).getFullYear();
-      const startDate = new Date(`${targetYear}-01-01`);
-      const endDate = new Date(`${targetYear}-12-31`);
+      const targetYear = start.getFullYear();
+      const yrStart = new Date(`${targetYear}-01-01`);
+      const yrEnd = new Date(`${targetYear}-12-31`);
 
       // Sum all approved/pending leaves of this type (code or nameEn) in this year for this employee
       const existingLeaves = await prisma.leave.findMany({
@@ -113,14 +139,14 @@ export const create = async (req, res) => {
           },
           status: { in: ['Pending', 'Approved'] },
           leaveDate: {
-            gte: startDate,
-            lte: endDate
+            gte: yrStart,
+            lte: yrEnd
           }
         }
       });
 
       const totalUsedDays = existingLeaves.reduce((sum, item) => sum + parseFloat(item.amountDays), 0);
-      const requestedDays = parseFloat(amountDays);
+      const requestedDays = dates.length * amountDaysPerDay;
 
       // Check if employee has custom limit override for this leave type code
       const customOverride = await prisma.employeeLeaveLimit.findUnique({
@@ -141,18 +167,26 @@ export const create = async (req, res) => {
       }
     }
 
-    const leave = await prisma.leave.create({
-      data: {
-        staffId,
-        leaveDate: new Date(leaveDate),
-        leaveType,
-        amountDays: parseFloat(amountDays),
-        reason,
-        status: 'Pending'
+    const createPromises = dates.map(date => {
+      let finalReason = reason;
+      if (durationType === 'Morning' || durationType === 'Afternoon') {
+        finalReason = reason ? `${reason} (${durationType})` : `(${durationType})`;
       }
+
+      return prisma.leave.create({
+        data: {
+          staffId,
+          leaveDate: date,
+          leaveType,
+          amountDays: amountDaysPerDay,
+          reason: finalReason,
+          status: 'Pending'
+        }
+      });
     });
 
-    res.status(201).json(leave);
+    const leavesCreated = await prisma.$transaction(createPromises);
+    res.status(201).json(leavesCreated[0]);
   } catch (error) {
     console.error('Create leave request error:', error);
     res.status(500).json({ message: 'Server error creating leave request' });

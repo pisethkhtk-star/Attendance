@@ -54,8 +54,9 @@ export default function App() {
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
   const [newLeaveType, setNewLeaveType] = useState('Annual Leave');
-  const [newLeaveDate, setNewLeaveDate] = useState('');
-  const [newLeaveAmount, setNewLeaveAmount] = useState('1.0');
+  const [newLeaveStartDate, setNewLeaveStartDate] = useState('');
+  const [newLeaveEndDate, setNewLeaveEndDate] = useState('');
+  const [newLeaveDurationType, setNewLeaveDurationType] = useState('Full Day');
   const [newLeaveReason, setNewLeaveReason] = useState('');
   const [submittingLeave, setSubmittingLeave] = useState(false);
 
@@ -196,24 +197,26 @@ export default function App() {
 
   // Submit leave request
   const handleRequestLeaveSubmit = async () => {
-    if (!newLeaveDate || !newLeaveType || !newLeaveAmount) {
-      Alert.alert('បញ្ចូលព័ត៌មាន', 'សូមបញ្ចូលថ្ងៃខែ ប្រភេទច្បាប់ និងចំនួនថ្ងៃ។');
+    if (!newLeaveStartDate || !newLeaveEndDate || !newLeaveType || !newLeaveDurationType) {
+      Alert.alert('បញ្ចូលព័ត៌មាន', 'សូមបញ្ចូលថ្ងៃខែចាប់ផ្តើម បញ្ចប់ និងប្រភេទច្បាប់សម្រាក។');
       return;
     }
     setSubmittingLeave(true);
     try {
       await axios.post(`${apiUrl}/leaves`, {
         staffId: user.staffId,
-        leaveDate: newLeaveDate,
+        startDate: newLeaveStartDate,
+        endDate: newLeaveEndDate,
+        durationType: newLeaveDurationType,
         leaveType: newLeaveType,
-        amountDays: newLeaveAmount,
         reason: newLeaveReason
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       Alert.alert('ជោគជ័យ', 'ការស្នើសុំច្បាប់សម្រាកត្រូវបានផ្ញើ!');
       setShowAddLeaveModal(false);
-      setNewLeaveDate('');
+      setNewLeaveStartDate('');
+      setNewLeaveEndDate('');
       setNewLeaveReason('');
       fetchLeaveHistory();
     } catch (err) {
@@ -389,7 +392,10 @@ export default function App() {
     fetchLeaveHistory();
     fetchLeaveTypes();
     // Preset new request date
-    setNewLeaveDate(new Date().toISOString().split('T')[0]);
+    const todayStr = new Date().toISOString().split('T')[0];
+    setNewLeaveStartDate(todayStr);
+    setNewLeaveEndDate(todayStr);
+    setNewLeaveDurationType('Full Day');
   };
 
   // Rendering screen branches
@@ -868,26 +874,40 @@ export default function App() {
                 ))}
               </View>
 
-              {/* Date Input */}
-              <Text style={styles.formLabel}>ថ្ងៃខែឆ្នាំ (Date: YYYY-MM-DD)</Text>
+              {/* Date Inputs Range */}
+              <Text style={styles.formLabel}>ថ្ងៃចាប់ផ្ដើម (Start Date: YYYY-MM-DD)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 2026-07-01"
+                placeholderTextColor="#94a3b8"
+                value={newLeaveStartDate}
+                onChangeText={setNewLeaveStartDate}
+              />
+
+              <Text style={styles.formLabel}>ថ្ងៃបញ្ចប់ (End Date: YYYY-MM-DD)</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. 2026-07-03"
                 placeholderTextColor="#94a3b8"
-                value={newLeaveDate}
-                onChangeText={setNewLeaveDate}
+                value={newLeaveEndDate}
+                onChangeText={setNewLeaveEndDate}
               />
 
-              {/* Duration Input */}
-              <Text style={styles.formLabel}>រយៈពេល (Duration: Days)</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 1.0 or 0.5"
-                placeholderTextColor="#94a3b8"
-                value={newLeaveAmount}
-                onChangeText={setNewLeaveAmount}
-                keyboardType="numeric"
-              />
+              {/* Duration Selection (Full Day / Morning / Afternoon) */}
+              <Text style={styles.formLabel}>រយៈពេលក្នុងមួយថ្ងៃ (Duration Per Day)</Text>
+              <View style={styles.pickerSelectorContainer}>
+                {['Full Day', 'Morning', 'Afternoon'].map((dur) => (
+                  <TouchableOpacity
+                    key={dur}
+                    style={[styles.pickerOption, newLeaveDurationType === dur ? styles.pickerOptionActive : null]}
+                    onPress={() => setNewLeaveDurationType(dur)}
+                  >
+                    <Text style={[styles.pickerOptionText, newLeaveDurationType === dur ? styles.pickerOptionTextActive : null]}>
+                      {dur === 'Full Day' ? '☀️ Full Day' : dur === 'Morning' ? '🌅 Morning' : '🌆 Afternoon'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
               {/* Reason Input */}
               <Text style={styles.formLabel}>មូលហេតុ (Reason)</Text>

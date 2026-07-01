@@ -19,9 +19,10 @@ const Leaves = () => {
   const [search, setSearch] = useState('');
 
   // Request Form State
-  const [leaveDate, setLeaveDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [durationType, setDurationType] = useState('Full Day');
   const [leaveType, setLeaveType] = useState('AL');
-  const [amountDays, setAmountDays] = useState('1.0');
   const [reason, setReason] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -71,13 +72,15 @@ const Leaves = () => {
   }, [filterStatus, search]);
 
   const handleOpenRequestModal = () => {
-    setLeaveDate(new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    setStartDate(today);
+    setEndDate(today);
+    setDurationType('Full Day');
     if (leaveTypes.length > 0) {
       setLeaveType(leaveTypes[0].code);
     } else {
       setLeaveType('AL');
     }
-    setAmountDays('1.0');
     setReason('');
     setErrorMsg('');
     setShowModal(true);
@@ -85,7 +88,7 @@ const Leaves = () => {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
-    if (!leaveDate || !leaveType || !amountDays) {
+    if (!startDate || !endDate || !leaveType || !durationType) {
       setErrorMsg('Required fields are missing');
       return;
     }
@@ -93,9 +96,10 @@ const Leaves = () => {
     try {
       await api.post('/leaves', {
         staffId: user.staffId, // Backend forces if Employee, otherwise uses this
-        leaveDate,
+        startDate,
+        endDate,
+        durationType,
         leaveType,
-        amountDays,
         reason
       });
       setShowModal(false);
@@ -281,17 +285,47 @@ const Leaves = () => {
                 </div>
               )}
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">
+                    ថ្ងៃចាប់ផ្ដើម (Start Date) *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">
+                    ថ្ងៃបញ្ចប់ (End Date) *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">
-                  {t("leaveDate")} *
+                  រយៈពេលក្នុងមួយថ្ងៃ (Duration Per Day) *
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={leaveDate}
-                  onChange={(e) => setLeaveDate(e.target.value)}
-                  className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                />
+                <select
+                  value={durationType}
+                  onChange={(e) => setDurationType(e.target.value)}
+                  className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
+                >
+                  <option value="Full Day" className="bg-slate-900">☀️ Full Day (1.0)</option>
+                  <option value="Morning" className="bg-slate-900">🌅 Morning (0.5)</option>
+                  <option value="Afternoon" className="bg-slate-900">🌆 Afternoon (0.5)</option>
+                </select>
               </div>
 
               <div>
@@ -316,21 +350,6 @@ const Leaves = () => {
                     </>
                   )}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">
-                  {t("amountDays")} *
-                </label>
-                <input
-                  type="number"
-                  required
-                  step="0.5"
-                  min="0.5"
-                  value={amountDays}
-                  onChange={(e) => setAmountDays(e.target.value)}
-                  className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                />
               </div>
 
               <div>
