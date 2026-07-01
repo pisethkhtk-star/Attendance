@@ -294,6 +294,17 @@ Use `npx.cmd` instead of `npx` in PowerShell:
 npx.cmd prisma migrate dev --name fix
 ```
 
+### Script Execution Error on Windows (npm/npx)
+ប្រសិនបើជួបបញ្ហា `cannot be loaded because running scripts is disabled on this system` នៅពេល run commands៖
+ប្រើប្រាស់ `npm.cmd` ឬ `npx.cmd` ជំនួសវិញ៖
+```bash
+# running dev server
+npm.cmd run dev
+
+# running prisma commands
+npx.cmd prisma migrate dev
+```
+
 ### GPS not working on Kiosk
 - Browser must be on `localhost` or **HTTPS**
 - Allow **Location** permission in browser settings

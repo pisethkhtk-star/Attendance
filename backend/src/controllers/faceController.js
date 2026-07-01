@@ -78,10 +78,17 @@ export const verifyAndCheckInFace = async (req, res) => {
   }
 
   try {
-    // Geofencing limits check
-    const settings = await prisma.kioskSetting.findFirst();
-    if (settings) {
-      if (latitude === undefined || longitude === undefined) {
+    // Geofencing limits check (Support multiple zones)
+    const settingsList = await prisma.kioskSetting.findMany();
+    if (settingsList.length > 0) {
+      if (
+        latitude === undefined || 
+        longitude === undefined || 
+        latitude === null || 
+        longitude === null || 
+        isNaN(parseFloat(latitude)) || 
+        isNaN(parseFloat(longitude))
+      ) {
         return res.status(400).json({
           success: false,
           message: 'Location data (GPS) is required to check-in. សូមបើក Location (GPS) លើឧបករណ៍របស់អ្នក។'
@@ -91,17 +98,38 @@ export const verifyAndCheckInFace = async (req, res) => {
       const clientLat = parseFloat(latitude);
       const clientLng = parseFloat(longitude);
       
-      const distance = getHaversineDistance(
-        clientLat, 
-        clientLng, 
-        settings.latitude, 
-        settings.longitude
-      );
+      let isInsideAnyZone = false;
+      let closestZone = null;
+      let minDistance = Infinity;
 
-      if (distance > settings.radius) {
+      for (const settings of settingsList) {
+        const distance = getHaversineDistance(
+          clientLat, 
+          clientLng, 
+          settings.latitude, 
+          settings.longitude
+        );
+        if (distance <= settings.radius) {
+          isInsideAnyZone = true;
+          break;
+        }
+        const delta = distance - settings.radius;
+        if (delta < minDistance) {
+          minDistance = delta;
+          closestZone = {
+            name: settings.name,
+            distance: Math.round(distance),
+            radius: settings.radius
+          };
+        }
+      }
+
+      if (!isInsideAnyZone) {
         return res.status(403).json({
           success: false,
-          message: `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone). You are ${Math.round(distance)}m away. Allowed limit is ${settings.radius}m.`
+          message: closestZone 
+            ? `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone). Closest branch "${closestZone.name}" is ${closestZone.distance}m away (limit is ${closestZone.radius}m).`
+            : `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone).`
         });
       }
     }

@@ -7,7 +7,7 @@ import { QrCodeIcon, CameraIcon, ClockIcon, MapPinIcon, Cog6ToothIcon } from '@h
 import { Html5Qrcode } from 'html5-qrcode';
 
 const Kiosk = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { t, getLocalizedName } = useLanguage();
   const [activeTab, setActiveTab] = useState('face'); // face, qrcode
 
@@ -31,8 +31,8 @@ const Kiosk = () => {
   const faceIntervalRef = useRef(null);
   const qrScannerRef = useRef(null);
 
-  // Geolocation tracker
-  const requestLocation = () => {
+  // Geolocation tracker with fallback for low accuracy (crucial for desktops without GPS cards)
+  const requestLocation = (highAccuracy = true) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -43,17 +43,22 @@ const Kiosk = () => {
           setLocationError('');
         },
         (error) => {
-          console.error('Error fetching location:', error);
-          setLocationError('Enable GPS / Location access on this device');
+          console.error(`Error fetching location (highAccuracy=${highAccuracy}):`, error);
+          if (highAccuracy && error.code !== error.PERMISSION_DENIED) {
+            // Retry with low accuracy (uses WiFi/IP geo) if high accuracy times out/fails
+            requestLocation(false);
+          } else {
+            setLocationError('Enable GPS / Location access on this device');
+          }
         },
-        { enableHighAccuracy: true, timeout: 15000 }
+        { enableHighAccuracy: highAccuracy, timeout: 10000, maximumAge: 5000 }
       );
     } else {
       setLocationError('Geolocation not supported by this browser.');
     }
   };
 
-  // Digital clock & Geolocation polling
+  // Digital clock & Geolocation tracking
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -63,12 +68,42 @@ const Kiosk = () => {
     updateTime();
     const interval = setInterval(updateTime, 1000);
 
-    requestLocation();
-    const locInterval = setInterval(requestLocation, 15000);
+    // Initial fetch
+    requestLocation(true);
+
+    // Continuously watch the position (more responsive than setInterval polling)
+    let watchId = null;
+    const startWatching = (highAccuracy = true) => {
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            setCoords({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+            setLocationError('');
+          },
+          (error) => {
+            console.error(`WatchPosition error (highAccuracy=${highAccuracy}):`, error);
+            if (highAccuracy && error.code !== error.PERMISSION_DENIED) {
+              if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+              startWatching(false);
+            } else {
+              setLocationError('Enable GPS / Location access on this device');
+            }
+          },
+          { enableHighAccuracy: highAccuracy, timeout: 15000, maximumAge: 10000 }
+        );
+      }
+    };
+
+    startWatching(true);
 
     return () => {
       clearInterval(interval);
-      clearInterval(locInterval);
+      if (watchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
     };
   }, []);
 
@@ -128,11 +163,17 @@ const Kiosk = () => {
   // Process QR Code Scans
   const handleQrScan = async (decodedText) => {
     if (scanLock) return;
+    if (!coords) {
+      playSound('error');
+      setScanError('កំពុងស្វែងរកទីតាំង GPS... សូមរង់ចាំមួយភ្លែត ឬបើក Location Access លើ browser (Acquiring location...)');
+      requestLocation(true);
+      return;
+    }
     try {
       const response = await api.post('/qrcode/scan', {
         qrToken: decodedText,
-        latitude: coords?.latitude,
-        longitude: coords?.longitude
+        latitude: coords.latitude,
+        longitude: coords.longitude
       });
       if (response.data.success) {
         triggerSuccessModal(response.data);
@@ -149,11 +190,17 @@ const Kiosk = () => {
   // Process Face Recognition embedding check
   const handleFaceCheckIn = async (descriptorArray) => {
     if (scanLock) return;
+    if (!coords) {
+      playSound('error');
+      setScanError('កំពុងស្វែងរកទីតាំង GPS... សូមរង់ចាំមួយភ្លែត ឬបើក Location Access លើ browser (Acquiring location...)');
+      requestLocation(true);
+      return;
+    }
     try {
       const response = await api.post('/face/checkin', {
         faceDescriptor: descriptorArray,
-        latitude: coords?.latitude,
-        longitude: coords?.longitude
+        latitude: coords.latitude,
+        longitude: coords.longitude
       });
       if (response.data.success) {
         triggerSuccessModal(response.data);
@@ -290,8 +337,8 @@ const Kiosk = () => {
       {/* Kiosk Clock Banner */}
       <div className="w-full text-center space-y-2 mt-4 relative">
 
-        {/* Admin: Link to Geofencing Settings Page */}
-        {user?.role === 'Admin' && (
+        {/* Permission-guarded: Link to Geofencing Settings Page */}
+        {hasPermission('kiosk_settings') && (
           <Link
             to="/kiosk-settings"
             className="absolute top-2 right-4 flex items-center gap-1.5 p-2 px-3 bg-slate-900/60 text-slate-400 hover:text-indigo-400 border border-white/10 hover:border-indigo-500/30 rounded-xl transition-all cursor-pointer z-20 text-xs font-semibold font-khmer"

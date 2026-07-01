@@ -89,6 +89,58 @@ export const create = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
+    // Validate leave type and max days limit
+    const typeInfo = await prisma.leaveType.findFirst({
+      where: {
+        OR: [
+          { code: leaveType },
+          { nameEn: leaveType }
+        ]
+      }
+    });
+
+    if (typeInfo) {
+      const targetYear = new Date(leaveDate).getFullYear();
+      const startDate = new Date(`${targetYear}-01-01`);
+      const endDate = new Date(`${targetYear}-12-31`);
+
+      // Sum all approved/pending leaves of this type (code or nameEn) in this year for this employee
+      const existingLeaves = await prisma.leave.findMany({
+        where: {
+          staffId,
+          leaveType: {
+            in: [typeInfo.code, typeInfo.nameEn]
+          },
+          status: { in: ['Pending', 'Approved'] },
+          leaveDate: {
+            gte: startDate,
+            lte: endDate
+          }
+        }
+      });
+
+      const totalUsedDays = existingLeaves.reduce((sum, item) => sum + parseFloat(item.amountDays), 0);
+      const requestedDays = parseFloat(amountDays);
+
+      // Check if employee has custom limit override for this leave type code
+      const customOverride = await prisma.employeeLeaveLimit.findUnique({
+        where: {
+          staffId_leaveCode: {
+            staffId,
+            leaveCode: typeInfo.code
+          }
+        }
+      });
+
+      const allowedLimit = customOverride ? customOverride.maxDays : typeInfo.maxDays;
+
+      if (totalUsedDays + requestedDays > allowedLimit) {
+        return res.status(400).json({
+          message: `អ្នកបានស្នើច្បាប់ហួសការកំណត់! (Exceeded leave limit). You have used ${totalUsedDays} days out of ${allowedLimit} allowed days for '${typeInfo.nameKh || typeInfo.nameEn}' in ${targetYear}. You requested ${requestedDays} days.`
+        });
+      }
+    }
+
     const leave = await prisma.leave.create({
       data: {
         staffId,

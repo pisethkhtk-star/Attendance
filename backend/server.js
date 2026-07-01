@@ -12,6 +12,8 @@ import qrRoutes from './src/routes/qrRoutes.js';
 import logRoutes from './src/routes/logRoutes.js';
 import permissionRoutes from './src/routes/permissionRoutes.js';
 import kioskSettingsRoutes from './src/routes/kioskSettingsRoutes.js';
+import leaveTypeRoutes from './src/routes/leaveTypeRoutes.js';
+import leaveLimitRoutes from './src/routes/leaveLimitRoutes.js';
 import { initializePermissions } from './src/utils/permissionInitializer.js';
 
 dotenv.config();
@@ -39,6 +41,8 @@ app.use('/api/qrcode', qrRoutes);
 app.use('/api/attendance-logs', logRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/kiosk-settings', kioskSettingsRoutes);
+app.use('/api/leave-types', leaveTypeRoutes);
+app.use('/api/employee-leave-limits', leaveLimitRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -12,6 +12,7 @@ const Leaves = () => {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState([]);
 
   // Filters State
   const [filterStatus, setFilterStatus] = useState('');
@@ -19,10 +20,37 @@ const Leaves = () => {
 
   // Request Form State
   const [leaveDate, setLeaveDate] = useState('');
-  const [leaveType, setLeaveType] = useState('Annual Leave');
+  const [leaveType, setLeaveType] = useState('AL');
   const [amountDays, setAmountDays] = useState('1.0');
   const [reason, setReason] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const fetchLeaveTypes = async () => {
+    try {
+      const res = await api.get('/leave-types');
+      setLeaveTypes(res.data);
+      if (res.data.length > 0) {
+        setLeaveType(res.data[0].code);
+      }
+    } catch (err) {
+      console.error('Error fetching leave types:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaveTypes();
+  }, []);
+
+  const getLeaveTypeLabel = (code) => {
+    const type = leaveTypes.find(t => t.code === code || t.nameEn === code);
+    if (type) {
+      return getLocalizedName(type.nameEn, type.nameKh);
+    }
+    if (code === 'Annual Leave') return t("annualLeave");
+    if (code === 'Sick Leave') return t("sickLeave");
+    if (code === 'Personal Leave') return t("personalLeave");
+    return code;
+  };
 
   const fetchLeaves = async () => {
     try {
@@ -44,7 +72,11 @@ const Leaves = () => {
 
   const handleOpenRequestModal = () => {
     setLeaveDate(new Date().toISOString().split('T')[0]);
-    setLeaveType('Annual Leave');
+    if (leaveTypes.length > 0) {
+      setLeaveType(leaveTypes[0].code);
+    } else {
+      setLeaveType('AL');
+    }
     setAmountDays('1.0');
     setReason('');
     setErrorMsg('');
@@ -92,8 +124,8 @@ const Leaves = () => {
       {/* Title block */}
       <div className="flex justify-between items-center glass-card p-6 rounded-2xl glow-indigo">
         <div>
-          <h2 className="text-xl font-bold text-white font-khmer">{t("leaves")}</h2>
-          <p className="text-slate-400 text-xs mt-1">Submit leave requests and manage approvals</p>
+          <h2 className="text-xl font-bold text-white font-khmer">{t("requests")}</h2>
+          <p className="text-slate-400 text-xs mt-1">Submit requests and manage approvals</p>
         </div>
         <button
           onClick={handleOpenRequestModal}
@@ -179,7 +211,7 @@ const Leaves = () => {
                         {new Date(leave.leaveDate).toLocaleDateString()}
                       </td>
                       <td className="py-4 px-6 font-khmer">
-                        {leave.leaveType === 'Annual Leave' ? t("annualLeave") : leave.leaveType === 'Sick Leave' ? t("sickLeave") : t("personalLeave")}
+                        {getLeaveTypeLabel(leave.leaveType)}
                       </td>
                       <td className="py-4 px-6 text-center font-semibold text-white">
                         {parseFloat(leave.amountDays).toFixed(1)}
@@ -271,9 +303,18 @@ const Leaves = () => {
                   onChange={(e) => setLeaveType(e.target.value)}
                   className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
                 >
-                  <option value="Annual Leave" className="bg-slate-900">{t("annualLeave")}</option>
-                  <option value="Sick Leave" className="bg-slate-900">{t("sickLeave")}</option>
-                  <option value="Personal Leave" className="bg-slate-900">{t("personalLeave")}</option>
+                  {leaveTypes.map((type) => (
+                    <option key={type.id} value={type.code} className="bg-slate-900">
+                      {getLocalizedName(type.nameEn, type.nameKh)}
+                    </option>
+                  ))}
+                  {leaveTypes.length === 0 && (
+                    <>
+                      <option value="Annual Leave" className="bg-slate-900">{t("annualLeave")}</option>
+                      <option value="Sick Leave" className="bg-slate-900">{t("sickLeave")}</option>
+                      <option value="Personal Leave" className="bg-slate-900">{t("personalLeave")}</option>
+                    </>
+                  )}
                 </select>
               </div>
 

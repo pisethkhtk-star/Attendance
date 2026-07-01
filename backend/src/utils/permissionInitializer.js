@@ -16,6 +16,9 @@ export const initializePermissions = async () => {
       { role: 'Admin', resource: 'leaves', canAccess: true },
       { role: 'Admin', resource: 'reports', canAccess: true },
       { role: 'Admin', resource: 'kiosk', canAccess: true },
+      { role: 'Admin', resource: 'kiosk_settings', canAccess: true },
+      { role: 'Admin', resource: 'leave_types', canAccess: true },
+      { role: 'Admin', resource: 'leave_allowances', canAccess: true },
       { role: 'Admin', resource: 'permissions', canAccess: true },
 
       // HR permissions
@@ -29,6 +32,9 @@ export const initializePermissions = async () => {
       { role: 'HR', resource: 'leaves', canAccess: true },
       { role: 'HR', resource: 'reports', canAccess: true },
       { role: 'HR', resource: 'kiosk', canAccess: true },
+      { role: 'HR', resource: 'kiosk_settings', canAccess: false },
+      { role: 'HR', resource: 'leave_types', canAccess: true },
+      { role: 'HR', resource: 'leave_allowances', canAccess: true },
       { role: 'HR', resource: 'permissions', canAccess: false },
 
       // Manager permissions
@@ -42,6 +48,9 @@ export const initializePermissions = async () => {
       { role: 'Manager', resource: 'leaves', canAccess: true },
       { role: 'Manager', resource: 'reports', canAccess: true },
       { role: 'Manager', resource: 'kiosk', canAccess: true },
+      { role: 'Manager', resource: 'kiosk_settings', canAccess: false },
+      { role: 'Manager', resource: 'leave_types', canAccess: false },
+      { role: 'Manager', resource: 'leave_allowances', canAccess: false },
       { role: 'Manager', resource: 'permissions', canAccess: false },
 
       // Employee permissions
@@ -55,6 +64,9 @@ export const initializePermissions = async () => {
       { role: 'Employee', resource: 'leaves', canAccess: true },
       { role: 'Employee', resource: 'reports', canAccess: false },
       { role: 'Employee', resource: 'kiosk', canAccess: false },
+      { role: 'Employee', resource: 'kiosk_settings', canAccess: false },
+      { role: 'Employee', resource: 'leave_types', canAccess: false },
+      { role: 'Employee', resource: 'leave_allowances', canAccess: false },
       { role: 'Employee', resource: 'permissions', canAccess: false },
     ];
 
@@ -81,6 +93,37 @@ export const initializePermissions = async () => {
           longitude: 104.9282,
           radius: 100.0 // Default 100 meters
         }
+      });
+    }
+
+    // Seed default Leave Types if none exists
+    const leaveTypesCount = await prisma.leaveType.count();
+    if (leaveTypesCount === 0) {
+      console.log('Seeding default Leave Types...');
+      await prisma.leaveType.createMany({
+        data: [
+          {
+            code: 'AL',
+            nameEn: 'Annual Leave',
+            nameKh: 'ច្បាប់សម្រាកប្រចាំឆ្នាំ',
+            maxDays: 18.0,
+            description: 'Standard paid annual leave allowance'
+          },
+          {
+            code: 'SL',
+            nameEn: 'Sick Leave',
+            nameKh: 'ច្បាប់ឈឺ',
+            maxDays: 12.0,
+            description: 'Paid leave for medical or health issues'
+          },
+          {
+            code: 'PL',
+            nameEn: 'Personal Leave',
+            nameKh: 'ច្បាប់ផ្ទាល់ខ្លួន',
+            maxDays: 7.0,
+            description: 'Leave for private/personal business'
+          }
+        ]
       });
     }
 

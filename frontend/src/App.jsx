@@ -20,6 +20,8 @@ import Reports from './pages/Reports';
 import Kiosk from './pages/Kiosk';
 import KioskSettings from './pages/KioskSettings';
 import Permissions from './pages/Permissions';
+import LeaveTypes from './pages/LeaveTypes'; // verified
+import LeaveAllowances from './pages/LeaveAllowances'; // verified
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -130,12 +132,32 @@ function App() {
                 }
               />
 
-              {/* Kiosk Geofencing Settings (Admin only) */}
+              {/* Kiosk Geofencing Settings (Permission-guarded) */}
               <Route
                 path="kiosk-settings"
                 element={
-                  <ProtectedRoute roles={['Admin']}>
+                  <ProtectedRoute resource="kiosk_settings">
                     <KioskSettings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Leave Types Configuration (Permission-guarded) */}
+              <Route
+                path="leave-types"
+                element={
+                  <ProtectedRoute resource="leave_types">
+                    <LeaveTypes />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Leave Allowances Configuration (Permission-guarded) */}
+              <Route
+                path="leave-allowances"
+                element={
+                  <ProtectedRoute resource="leave_allowances">
+                    <LeaveAllowances />
                   </ProtectedRoute>
                 }
               />

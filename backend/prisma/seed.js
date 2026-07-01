@@ -8,6 +8,7 @@ async function main() {
 
   // 1. Clean existing database records (order of dependency)
   await prisma.leave.deleteMany({});
+  await prisma.leaveType.deleteMany({});
   await prisma.attendance.deleteMany({});
   await prisma.employee.deleteMany({});
   await prisma.position.deleteMany({});
@@ -256,12 +257,40 @@ async function main() {
   }
   console.log('Attendances seeded.');
 
-  // 7. Seed Leaves (some requests)
+  // 7. Seed Leave Types
+  console.log('Seeding Leave Types...');
+  await prisma.leaveType.createMany({
+    data: [
+      {
+        code: 'AL',
+        nameEn: 'Annual Leave',
+        nameKh: 'ច្បាប់សម្រាកប្រចាំឆ្នាំ',
+        maxDays: 18.0,
+        description: 'Standard paid annual leave allowance'
+      },
+      {
+        code: 'SL',
+        nameEn: 'Sick Leave',
+        nameKh: 'ច្បាប់ឈឺ',
+        maxDays: 12.0,
+        description: 'Paid leave for medical or health issues'
+      },
+      {
+        code: 'PL',
+        nameEn: 'Personal Leave',
+        nameKh: 'ច្បាប់ផ្ទាល់ខ្លួន',
+        maxDays: 7.0,
+        description: 'Leave for private/personal business'
+      }
+    ]
+  });
+
+  // 8. Seed Leaves (some requests)
   await prisma.leave.create({
     data: {
       staffId: 'EMP-004',
       leaveDate: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      leaveType: 'Sick Leave',
+      leaveType: 'SL',
       amountDays: 1.0,
       reason: 'Fever and cold',
       status: 'Approved',
@@ -274,7 +303,7 @@ async function main() {
     data: {
       staffId: 'EMP-005',
       leaveDate: new Date(today.getTime() + 1 * 24 * 60 * 60 * 1000), // Tomorrow
-      leaveType: 'Annual Leave',
+      leaveType: 'AL',
       amountDays: 2.0,
       reason: 'Family trip to Siem Reap temples',
       status: 'Pending',

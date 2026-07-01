@@ -23,7 +23,10 @@ const Permissions = () => {
     { key: 'delete_attendance', label: 'Delete Attendance Logs (លុបវត្តមាន)' },
     { key: 'leaves', label: 'Leaves approval (ច្បាប់ឈប់សម្រាក)' },
     { key: 'reports', label: 'Reports view (របាយការណ៍)' },
-    { key: 'kiosk', label: 'Kiosk Entrance mode (ម៉ាស៊ីនស្កេន)' }
+    { key: 'kiosk', label: 'Kiosk Entrance mode (ម៉ាស៊ីនស្កេន)' },
+    { key: 'kiosk_settings', label: 'Kiosk Geofencing (កំណត់ទីតាំងស្កេន)' },
+    { key: 'leave_types', label: 'Leave Types Configuration (កំណត់ប្រភេទច្បាប់)' },
+    { key: 'leave_allowances', label: 'Leave Allowances Configuration (កំណត់ចំនួនច្បាប់បុគ្គលិក)' }
   ];
 
   const playSound = (type = 'success') => {
