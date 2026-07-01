@@ -154,9 +154,9 @@ model EmployeeQRCode {
 }
 
 model AttendanceLog {
-  id               String   @id @default(uuid()) @db.Uuid
-  staffId          String   @map("staff_id")
-  employee         Employee @relation(fields: [staffId], references: [staffId], onDelete: Cascade)
+  id               String    @id @default(uuid()) @db.Uuid
+  staffId          String?   @map("staff_id")
+  employee         Employee? @relation(fields: [staffId], references: [staffId], onDelete: Cascade)
   method           String   // 'face', 'qrcode', 'manual'
   action           String   // 'checkin_1', 'checkout_1', 'checkin_2', 'checkout_2'
   capturedAt       DateTime @default(now()) @map("captured_at")

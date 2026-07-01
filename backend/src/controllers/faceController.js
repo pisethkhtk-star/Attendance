@@ -109,7 +109,7 @@ export const verifyAndCheckInFace = async (req, res) => {
       // Log failed check-in attempt
       await prisma.attendanceLog.create({
         data: {
-          staffId: 'UNKNOWN',
+          staffId: null,
           method: 'face',
           action: 'UNKNOWN',
           status: 'failed',
