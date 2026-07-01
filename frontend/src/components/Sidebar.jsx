@@ -14,12 +14,13 @@ import {
   ShieldCheckIcon,
   MapPinIcon,
   ClipboardDocumentCheckIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { user, hasPermission } = useAuth();
   const { t } = useLanguage();
-  const [openMenus, setOpenMenus] = useState({ Leave: true, Department: true });
+  const [openMenus, setOpenMenus] = useState({ Leave: true, Setup: true });
 
   const menuItems = [
     {
@@ -28,27 +29,26 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       icon: HomeIcon,
     },
     {
-      key: "Department",
-      name: t("departments"),
-      icon: BuildingOfficeIcon,
+      key: "Setup",
+      name: t("setupGroup"),
+      icon: Cog6ToothIcon,
       subItems: [
         {
-          path: "/departments",
-          name: t("departments"),
-          resource: "departments",
+          path: "/employees",
+          name: t("employees"),
+          resource: "employees",
         },
         {
           path: "/positions",
           name: t("positions"),
           resource: "positions",
         },
+        {
+          path: "/departments",
+          name: t("departments"),
+          resource: "departments",
+        },
       ]
-    },
-    {
-      path: "/employees",
-      name: t("employees"),
-      icon: UsersIcon,
-      resource: "employees",
     },
     {
       path: "/attendance",
