@@ -27,18 +27,10 @@ const Dashboard = () => {
   const [liveTime, setLiveTime] = useState('');
   const [liveDate, setLiveDate] = useState('');
   
-  // Controls for custom simulations (testing late/early calculations)
-  const [enableOverride, setEnableOverride] = useState(false);
-  const [customTime, setCustomTime] = useState('08:15');
-  const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceNote, setAttendanceNote] = useState('');
-
   // Daily log state
   const [todayLogs, setTodayLogs] = useState([]);
   const [personalTodayLog, setPersonalTodayLog] = useState(null);
   
-  // Notification banner
-  const [notif, setNotif] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Update live clock
@@ -88,36 +80,7 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  // Log Check-in/out
-  const handleCheckInOut = async (action) => {
-    try {
-      const payload = {
-        staffId: user.staffId,
-        action,
-        note: attendanceNote,
-      };
 
-      if (enableOverride) {
-        payload.customTime = customTime;
-        payload.customDate = customDate;
-      }
-
-      const response = await api.post('/attendances/log', payload);
-      setNotif({ type: 'success', message: response.data.message });
-      setAttendanceNote('');
-      
-      // Refresh Dashboard statistics & logs
-      fetchData();
-
-      // Clear notification after 4s
-      setTimeout(() => setNotif(null), 4000);
-    } catch (error) {
-      console.error('Logging attendance error:', error);
-      const msg = error.response?.data?.message || 'Error occurred';
-      setNotif({ type: 'error', message: msg });
-      setTimeout(() => setNotif(null), 4000);
-    }
-  };
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -198,64 +161,10 @@ const Dashboard = () => {
           <div>
             <div className="flex justify-between items-center pb-4 border-b border-white/10">
               <h3 className="font-bold text-white flex items-center gap-2 font-khmer">
-                <ClockIcon className="h-5 w-5 text-indigo-400 animate-pulse" />
-                {t("liveConsole")}
+                <ClockIcon className="h-5 w-5 text-indigo-400" />
+                វត្តមានថ្ងៃនេះ (Today's Attendance Status)
               </h3>
-
-              {/* Simulation Toggle */}
-              <button
-                onClick={() => setEnableOverride(!enableOverride)}
-                className={`text-xs font-semibold py-1 px-3 rounded-lg border transition-all ${
-                  enableOverride
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                    : 'bg-slate-900/60 border-white/10 text-slate-400 hover:text-white'
-                }`}
-              >
-                {enableOverride ? '⚠️ Custom Time Active' : '⚙️ Simulate Time'}
-              </button>
             </div>
-
-            {/* Notification Banner */}
-            {notif && (
-              <div
-                className={`mt-4 p-4 rounded-xl text-sm font-semibold border ${
-                  notif.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-                    : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
-                }`}
-              >
-                {notif.message}
-              </div>
-            )}
-
-            {/* Time Simulation Panel */}
-            {enableOverride && (
-              <div className="mt-4 p-4 bg-slate-950/40 border border-white/5 rounded-xl space-y-3">
-                <p className="text-xs font-semibold text-slate-400 font-khmer">
-                  កំណត់ម៉ោង និងថ្ងៃសិប្បនិម្មិតដើម្បីសាកល្បង៖
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Time (ម៉ោង)</label>
-                    <input
-                      type="time"
-                      value={customTime}
-                      onChange={(e) => setCustomTime(e.target.value)}
-                      className="block w-full py-1.5 px-3 border border-white/10 rounded-lg text-sm bg-slate-950/60 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Date (ថ្ងៃខែឆ្នាំ)</label>
-                    <input
-                      type="date"
-                      value={customDate}
-                      onChange={(e) => setCustomDate(e.target.value)}
-                      className="block w-full py-1.5 px-3 border border-white/10 rounded-lg text-sm bg-slate-950/60 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Shift profile display */}
             <div className="mt-6 grid grid-cols-2 gap-4 p-4 bg-slate-950/40 border border-white/5 rounded-xl text-xs">
@@ -300,48 +209,6 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-
-            {/* Note text field */}
-            <div className="mt-6">
-              <label className="block text-xs font-semibold text-slate-400 mb-2 font-khmer">
-                កំណត់ត្រាវត្តមានបន្ថែម (បញ្ជាក់ហេតុផលច្បាប់ យឺតយ៉ាវ ឬការងារក្រៅម៉ោង - ស្រេចចិត្ត)
-              </label>
-              <textarea
-                value={attendanceNote}
-                onChange={(e) => setAttendanceNote(e.target.value)}
-                placeholder="Optional explanation..."
-                rows={2}
-                className="w-full text-sm border border-white/10 rounded-xl p-3 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 bg-slate-950/60 text-white outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Action Log Buttons */}
-          <div className="mt-8 grid grid-cols-2 gap-4">
-            <button
-              onClick={() => handleCheckInOut('checkin_1')}
-              className="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all text-sm font-khmer shadow-lg shadow-emerald-500/10 outline-none cursor-pointer"
-            >
-              {t("checkin1")}
-            </button>
-            <button
-              onClick={() => handleCheckInOut('checkout_1')}
-              className="py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-semibold transition-all text-sm font-khmer shadow-lg shadow-rose-500/10 outline-none cursor-pointer"
-            >
-              {t("checkout1")}
-            </button>
-            <button
-              onClick={() => handleCheckInOut('checkin_2')}
-              className="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all text-sm font-khmer shadow-lg shadow-emerald-500/10 outline-none cursor-pointer"
-            >
-              {t("checkin2")}
-            </button>
-            <button
-              onClick={() => handleCheckInOut('checkout_2')}
-              className="py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-semibold transition-all text-sm font-khmer shadow-lg shadow-rose-500/10 outline-none cursor-pointer"
-            >
-              {t("checkout2")}
-            </button>
           </div>
         </div>
 
