@@ -19,7 +19,7 @@ import {
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { user, hasPermission } = useAuth();
   const { t } = useLanguage();
-  const [openMenus, setOpenMenus] = useState({ Request: true });
+  const [openMenus, setOpenMenus] = useState({ Leave: true });
 
   const menuItems = [
     {
@@ -51,13 +51,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       icon: ClockIcon,
     },
     {
-      key: "Request",
-      name: t("requests"),
+      key: "Leave",
+      name: t("leaveGroup"),
       icon: CalendarIcon,
       subItems: [
         {
           path: "/leaves",
-          name: t("requests"),
+          name: t("requestItem"),
           resource: "leaves",
         },
         {

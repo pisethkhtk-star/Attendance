@@ -124,7 +124,7 @@ const Leaves = () => {
       {/* Title block */}
       <div className="flex justify-between items-center glass-card p-6 rounded-2xl glow-indigo">
         <div>
-          <h2 className="text-xl font-bold text-white font-khmer">{t("requests")}</h2>
+          <h2 className="text-xl font-bold text-white font-khmer">{t("requestItem")}</h2>
           <p className="text-slate-400 text-xs mt-1">Submit requests and manage approvals</p>
         </div>
         <button
