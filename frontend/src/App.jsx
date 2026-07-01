@@ -22,6 +22,7 @@ import KioskSettings from './pages/KioskSettings';
 import Permissions from './pages/Permissions';
 import LeaveTypes from './pages/LeaveTypes'; // verified
 import LeaveAllowances from './pages/LeaveAllowances'; // verified
+import WorkHours from './pages/WorkHours'; // verified
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -158,6 +159,16 @@ function App() {
                 element={
                   <ProtectedRoute resource="leave_allowances">
                     <LeaveAllowances />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Company Work Hours Settings (Permission-guarded) */}
+              <Route
+                path="work-hours"
+                element={
+                  <ProtectedRoute resource="work_hours">
+                    <WorkHours />
                   </ProtectedRoute>
                 }
               />

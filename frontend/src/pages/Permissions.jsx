@@ -26,7 +26,8 @@ const Permissions = () => {
     { key: 'kiosk', label: 'Kiosk Entrance mode (ម៉ាស៊ីនស្កេន)' },
     { key: 'kiosk_settings', label: 'Kiosk Geofencing (កំណត់ទីតាំងស្កេន)' },
     { key: 'leave_types', label: 'Leave Types Configuration (កំណត់ប្រភេទច្បាប់)' },
-    { key: 'leave_allowances', label: 'Leave Allowances Configuration (កំណត់ចំនួនច្បាប់បុគ្គលិក)' }
+    { key: 'leave_allowances', label: 'Leave Allowances Configuration (កំណត់ចំនួនច្បាប់បុគ្គលិក)' },
+    { key: 'work_hours', label: 'Company Work Hours (កំណត់ម៉ោងការងារក្រុមហ៊ុន)' }
   ];
 
   const playSound = (type = 'success') => {

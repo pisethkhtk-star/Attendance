@@ -220,3 +220,14 @@ model EmployeeLeaveLimit {
   @@unique([staffId, leaveCode])
   @@map("employee_leave_limits")
 }
+
+model CompanyWorkHour {
+  id          String   @id @default(uuid()) @db.Uuid
+  shift1Start String   @map("shift_1_start") @default("08:00")
+  shift1End   String   @map("shift_1_end") @default("12:00")
+  shift2Start String   @map("shift_2_start") @default("13:00")
+  shift2End   String   @map("shift_2_end") @default("17:00")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("company_work_hours")
+}

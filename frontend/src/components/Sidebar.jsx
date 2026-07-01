@@ -48,6 +48,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           name: t("departments"),
           resource: "departments",
         },
+        {
+          path: "/work-hours",
+          name: t("workHours"),
+          resource: "work_hours",
+        },
       ]
     },
     {

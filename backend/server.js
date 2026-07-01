@@ -14,6 +14,7 @@ import permissionRoutes from './src/routes/permissionRoutes.js';
 import kioskSettingsRoutes from './src/routes/kioskSettingsRoutes.js';
 import leaveTypeRoutes from './src/routes/leaveTypeRoutes.js';
 import leaveLimitRoutes from './src/routes/leaveLimitRoutes.js';
+import workHourRoutes from './src/routes/workHourRoutes.js';
 import { initializePermissions } from './src/utils/permissionInitializer.js';
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use('/api/permissions', permissionRoutes);
 app.use('/api/kiosk-settings', kioskSettingsRoutes);
 app.use('/api/leave-types', leaveTypeRoutes);
 app.use('/api/employee-leave-limits', leaveLimitRoutes);
+app.use('/api/company-work-hours', workHourRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

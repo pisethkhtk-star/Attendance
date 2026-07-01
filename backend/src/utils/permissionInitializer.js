@@ -20,6 +20,7 @@ export const initializePermissions = async () => {
       { role: 'Admin', resource: 'leave_types', canAccess: true },
       { role: 'Admin', resource: 'leave_allowances', canAccess: true },
       { role: 'Admin', resource: 'permissions', canAccess: true },
+      { role: 'Admin', resource: 'work_hours', canAccess: true },
 
       // HR permissions
       { role: 'HR', resource: 'departments', canAccess: true },
@@ -36,6 +37,7 @@ export const initializePermissions = async () => {
       { role: 'HR', resource: 'leave_types', canAccess: true },
       { role: 'HR', resource: 'leave_allowances', canAccess: true },
       { role: 'HR', resource: 'permissions', canAccess: false },
+      { role: 'HR', resource: 'work_hours', canAccess: true },
 
       // Manager permissions
       { role: 'Manager', resource: 'departments', canAccess: false },
@@ -52,6 +54,7 @@ export const initializePermissions = async () => {
       { role: 'Manager', resource: 'leave_types', canAccess: false },
       { role: 'Manager', resource: 'leave_allowances', canAccess: false },
       { role: 'Manager', resource: 'permissions', canAccess: false },
+      { role: 'Manager', resource: 'work_hours', canAccess: false },
 
       // Employee permissions
       { role: 'Employee', resource: 'departments', canAccess: false },
@@ -68,6 +71,7 @@ export const initializePermissions = async () => {
       { role: 'Employee', resource: 'leave_types', canAccess: false },
       { role: 'Employee', resource: 'leave_allowances', canAccess: false },
       { role: 'Employee', resource: 'permissions', canAccess: false },
+      { role: 'Employee', resource: 'work_hours', canAccess: false },
     ];
 
     for (const p of defaultPermissions) {

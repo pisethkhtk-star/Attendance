@@ -51,6 +51,12 @@ const Employees = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Employee');
   const [errorMsg, setErrorMsg] = useState('');
+  const [defaultWorkHours, setDefaultWorkHours] = useState({
+    shift1Start: '08:00',
+    shift1End: '12:00',
+    shift2Start: '13:00',
+    shift2End: '17:00',
+  });
 
   const fetchEmployees = async () => {
     try {
@@ -76,6 +82,15 @@ const Employees = () => {
 
       const posRes = await api.get('/positions');
       setPositions(posRes.data);
+
+      try {
+        const workHoursRes = await api.get('/company-work-hours');
+        if (workHoursRes.data) {
+          setDefaultWorkHours(workHoursRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching default work hours:', err);
+      }
     } catch (error) {
       console.error('Error loading metadata:', error);
     }
@@ -248,10 +263,10 @@ const Employees = () => {
     setBranch('Phnom Penh HQ');
     setJoinDate(new Date().toISOString().split('T')[0]);
     setStatus('Active');
-    setShift1Start('08:00');
-    setShift1End('12:00');
-    setShift2Start('13:00');
-    setShift2End('17:00');
+    setShift1Start(defaultWorkHours.shift1Start);
+    setShift1End(defaultWorkHours.shift1End);
+    setShift2Start(defaultWorkHours.shift2Start);
+    setShift2End(defaultWorkHours.shift2End);
     setEmail('');
     setPassword('');
     setRole('Employee');
