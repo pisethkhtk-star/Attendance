@@ -25,7 +25,7 @@ export default function App() {
   // Login credentials
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   // API URL Config (Allows changing on Login screen for LAN testing)
   const [apiUrl, setApiUrl] = useState('http://192.168.88.165:5050/api');
 
@@ -128,6 +128,12 @@ export default function App() {
     }
   };
 
+  // Fill quick login credentials
+  const fillQuickCredentials = (qEmail, qPassword) => {
+    setEmail(qEmail);
+    setPassword(qPassword);
+  };
+
   // QR Code scanned handler
   const handleBarCodeScanned = async ({ type, data }) => {
     setScanned(true);
@@ -210,6 +216,8 @@ export default function App() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
+        <View style={styles.bgGlow1} />
+        <View style={styles.bgGlow2} />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.brandContainer}>
             <View style={styles.logoBadge}>
@@ -262,6 +270,44 @@ export default function App() {
             <TouchableOpacity style={styles.button} onPress={handleLogin}>
               <Text style={styles.buttonText}>ចូលគណនី (Login)</Text>
             </TouchableOpacity>
+
+            {/* Quick accounts selection for testing (matching website) */}
+            <View style={styles.quickSection}>
+              <Text style={styles.quickHeader}>សាកល្បងគណនីគំរូ / Quick Accounts</Text>
+              <View style={styles.quickGrid}>
+                <TouchableOpacity
+                  style={styles.quickBtn}
+                  onPress={() => fillQuickCredentials('admin@attendance.com', 'admin123')}
+                >
+                  <Text style={styles.quickRoleText}>Admin</Text>
+                  <Text style={styles.quickEmailText} numberOfLines={1}>admin@attendance.com</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.quickBtn}
+                  onPress={() => fillQuickCredentials('hr@attendance.com', 'hr123')}
+                >
+                  <Text style={styles.quickRoleText}>HR</Text>
+                  <Text style={styles.quickEmailText} numberOfLines={1}>hr@attendance.com</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.quickBtn}
+                  onPress={() => fillQuickCredentials('manager@attendance.com', 'manager123')}
+                >
+                  <Text style={styles.quickRoleText}>Manager</Text>
+                  <Text style={styles.quickEmailText} numberOfLines={1}>manager@attendance.com</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.quickBtn}
+                  onPress={() => fillQuickCredentials('rath@attendance.com', 'emp123')}
+                >
+                  <Text style={styles.quickRoleText}>Employee</Text>
+                  <Text style={styles.quickEmailText} numberOfLines={1}>rath@attendance.com</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -347,7 +393,7 @@ export default function App() {
                 barcodeTypes: ['qr'],
               }}
             />
-            
+
             {/* Scanner HUD Overlay */}
             <View style={styles.hudOverlay}>
               <View style={styles.scanTargetBox} />
@@ -370,7 +416,27 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#020617',
+  },
+  bgGlow1: {
+    position: 'absolute',
+    top: '5%',
+    left: '-25%',
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: '#4f46e5',
+    opacity: 0.08,
+  },
+  bgGlow2: {
+    position: 'absolute',
+    bottom: '5%',
+    right: '-25%',
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: '#7c3aed',
+    opacity: 0.06,
   },
   scrollContainer: {
     padding: 24,
@@ -381,7 +447,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#020617',
   },
   loadingScreenText: {
     color: '#94a3b8',
@@ -393,20 +459,20 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: '#312e81',
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: '#4f46e5',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#4f46e5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
     elevation: 8,
   },
   logoText: {
-    fontSize: 32,
+    fontSize: 28,
   },
   brandTitle: {
     fontSize: 24,
@@ -420,16 +486,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: '#1e293b',
+    backgroundColor: 'rgba(30, 41, 59, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 12,
   },
   cardHeader: {
     fontSize: 18,
@@ -448,26 +514,70 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#0f172a',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: '#fff',
     fontSize: 14,
   },
   button: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 12,
+    backgroundColor: '#6366f1',
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   buttonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  quickSection: {
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    paddingTop: 20,
+  },
+  quickHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickBtn: {
+    width: '48%',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  quickRoleText: {
+    color: '#a5b4fc',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  quickEmailText: {
+    color: '#94a3b8',
+    fontSize: 10,
   },
   dashboardHeader: {
     flexDirection: 'row',
