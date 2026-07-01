@@ -224,10 +224,10 @@ const Leaves = () => {
                       <td className="py-4 px-6">
                         <span
                           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-khmer ring-1 ${leave.status === 'Approved'
-                              ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
-                              : leave.status === 'Rejected'
-                                ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
-                                : 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
+                            : leave.status === 'Rejected'
+                              ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
+                              : 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
                             }`}
                         >
                           {leave.status === 'Approved' ? t("approved") : leave.status === 'Rejected' ? t("rejected") : t("pending")}
@@ -321,9 +321,9 @@ const Leaves = () => {
                   onChange={(e) => setDurationType(e.target.value)}
                   className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
                 >
-                  <option value="Full Day" className="bg-slate-900">☀️ Full Day (1.0)</option>
-                  <option value="Morning" className="bg-slate-900">🌅 Morning (0.5)</option>
-                  <option value="Afternoon" className="bg-slate-900">🌆 Afternoon (0.5)</option>
+                  <option value="Full Day" className="bg-slate-900"> Full Day</option>
+                  <option value="Morning" className="bg-slate-900"> Morning</option>
+                  <option value="Afternoon" className="bg-slate-900"> Afternoon</option>
                 </select>
               </div>
 

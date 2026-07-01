@@ -47,7 +47,7 @@ export const getAllRules = async (req, res) => {
 
 // Create a new rule
 export const createRule = async (req, res) => {
-  const { approverId, scope, targetDeptId, targetStaffId } = req.body;
+  const { approverId, scope, targetDeptId, targetStaffId, targetStaffIds } = req.body;
 
   if (!approverId || !scope) {
     return res.status(400).json({ message: 'Approver and Scope are required' });
@@ -66,33 +66,62 @@ export const createRule = async (req, res) => {
       return res.status(400).json({ message: 'Normal employees cannot be leave approvers' });
     }
 
-    let existing = null;
     if (scope === 'Department') {
       if (!targetDeptId) return res.status(400).json({ message: 'Department is required for Department scope' });
-      existing = await prisma.leaveApprovalRule.findFirst({
+      const existing = await prisma.leaveApprovalRule.findFirst({
         where: { approverId, scope: 'Department', targetDeptId }
       });
+      if (existing) {
+        return res.status(400).json({ message: 'This approval rule already exists for this department' });
+      }
+
+      const rule = await prisma.leaveApprovalRule.create({
+        data: {
+          approverId,
+          scope,
+          targetDeptId
+        }
+      });
+      return res.status(201).json(rule);
     } else {
-      if (!targetStaffId) return res.status(400).json({ message: 'Employee is required for Employee scope' });
-      existing = await prisma.leaveApprovalRule.findFirst({
-        where: { approverId, scope: 'Employee', targetStaffId }
+      const staffIds = targetStaffIds || (targetStaffId ? [targetStaffId] : []);
+      if (staffIds.length === 0) {
+        return res.status(400).json({ message: 'At least one target employee is required' });
+      }
+
+      const createdRules = [];
+      const skippedIds = [];
+
+      for (const tId of staffIds) {
+        const existing = await prisma.leaveApprovalRule.findFirst({
+          where: { approverId, scope: 'Employee', targetStaffId: tId }
+        });
+        if (existing) {
+          skippedIds.push(tId);
+          continue;
+        }
+
+        const rule = await prisma.leaveApprovalRule.create({
+          data: {
+            approverId,
+            scope,
+            targetStaffId: tId
+          }
+        });
+        createdRules.push(rule);
+      }
+
+      if (createdRules.length === 0 && skippedIds.length > 0) {
+        return res.status(400).json({ message: 'All selected employees already have this approval rule set.' });
+      }
+
+      return res.status(201).json({
+        message: `Successfully created rules for ${createdRules.length} employees.`,
+        createdCount: createdRules.length,
+        skippedCount: skippedIds.length,
+        data: createdRules[0] // return first for compatibility
       });
     }
-
-    if (existing) {
-      return res.status(400).json({ message: 'This approval rule already exists' });
-    }
-
-    const rule = await prisma.leaveApprovalRule.create({
-      data: {
-        approverId,
-        scope,
-        targetDeptId: scope === 'Department' ? targetDeptId : null,
-        targetStaffId: scope === 'Employee' ? targetStaffId : null
-      }
-    });
-
-    res.status(201).json(rule);
   } catch (error) {
     console.error('Error creating approval rule:', error);
     res.status(500).json({ message: 'Error creating approval rule' });

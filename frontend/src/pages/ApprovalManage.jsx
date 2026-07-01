@@ -17,8 +17,9 @@ const ApprovalManage = () => {
   const [approverId, setApproverId] = useState('');
   const [scope, setScope] = useState('Employee');
   const [targetDeptId, setTargetDeptId] = useState('');
-  const [targetStaffId, setTargetStaffId] = useState('');
-  
+  const [targetStaffIds, setTargetStaffIds] = useState([]); // multi-select
+  const [empSearch, setEmpSearch] = useState('');
+
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [saving, setSaving] = useState(false);
@@ -77,32 +78,31 @@ const ApprovalManage = () => {
   };
 
   const handleOpenAddModal = () => {
-    // Set default values
     const managers = employees.filter(e => ['Admin', 'HR', 'Manager'].includes(e.role));
-    if (managers.length > 0) {
-      setApproverId(managers[0].staffId);
-    } else {
-      setApproverId('');
-    }
-    
+    setApproverId(managers.length > 0 ? managers[0].staffId : '');
     setScope('Employee');
-    
-    const normalEmployees = employees.filter(e => e.role === 'Employee');
-    if (normalEmployees.length > 0) {
-      setTargetStaffId(normalEmployees[0].staffId);
-    } else {
-      setTargetStaffId('');
-    }
-
-    if (departments.length > 0) {
-      setTargetDeptId(departments[0].id);
-    } else {
-      setTargetDeptId('');
-    }
-
+    setTargetStaffIds([]);
+    setEmpSearch('');
+    setTargetDeptId(departments.length > 0 ? departments[0].id : '');
     setErrorMsg('');
     setSuccessMsg('');
     setShowModal(true);
+  };
+
+  const toggleEmployeeSelection = (staffId) => {
+    setTargetStaffIds(prev =>
+      prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const visible = filteredEmpList.map(e => e.staffId);
+    const allSelected = visible.every(id => targetStaffIds.includes(id));
+    if (allSelected) {
+      setTargetStaffIds(prev => prev.filter(id => !visible.includes(id)));
+    } else {
+      setTargetStaffIds(prev => [...new Set([...prev, ...visible])]);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -115,22 +115,23 @@ const ApprovalManage = () => {
       setErrorMsg('Target Department is required');
       return;
     }
-    if (scope === 'Employee' && !targetStaffId) {
-      setErrorMsg('Target Employee is required');
+    if (scope === 'Employee' && targetStaffIds.length === 0) {
+      setErrorMsg('Please select at least one target employee');
       return;
     }
 
     try {
       setSaving(true);
       setErrorMsg('');
-      await api.post('/leave-approvals', {
+      const res = await api.post('/leave-approvals', {
         approverId,
         scope,
         targetDeptId: scope === 'Department' ? targetDeptId : null,
-        targetStaffId: scope === 'Employee' ? targetStaffId : null
+        targetStaffIds: scope === 'Employee' ? targetStaffIds : null
       });
 
-      setSuccessMsg('Leave approval rule created successfully!');
+      const msg = res.data?.message || 'Leave approval rules created successfully!';
+      setSuccessMsg(msg);
       playSound('success');
       setShowModal(false);
       fetchData();
@@ -171,6 +172,9 @@ const ApprovalManage = () => {
   });
 
   const managers = employees.filter(e => ['Admin', 'HR', 'Manager'].includes(e.role));
+  const filteredEmpList = employees.filter(e =>
+    `${e.nameEn} ${e.nameKh} ${e.staffId}`.toLowerCase().includes(empSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -346,21 +350,67 @@ const ApprovalManage = () => {
                   </div>
                 </div>
 
-                {/* Target Dropdowns depending on scope */}
+                {/* Target depending on scope */}
                 {scope === 'Employee' ? (
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">ជ្រើសរើសបុគ្គលិកគោលដៅ (Target Employee)</label>
-                    <select
-                      value={targetStaffId}
-                      onChange={(e) => setTargetStaffId(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">ជ្រើសរើសបុគ្គលិកគោលដៅ (Target Employees)</label>
+                      <span className="text-xs text-indigo-400 font-semibold">{targetStaffIds.length} ជ្រើសរើស</span>
+                    </div>
+                    {/* Search within employees */}
+                    <input
+                      type="text"
+                      placeholder="ស្វែងរកបុគ្គលិក..."
+                      value={empSearch}
+                      onChange={(e) => setEmpSearch(e.target.value)}
+                      className="w-full py-1.5 px-3 bg-slate-950/80 border border-white/10 text-white placeholder-slate-500 rounded-lg text-xs outline-none focus:border-indigo-500 transition-all"
+                    />
+                    {/* Select All toggle */}
+                    <div
+                      onClick={toggleSelectAll}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
                     >
-                      {employees.map(emp => (
-                        <option key={emp.staffId} value={emp.staffId} className="bg-slate-900">
-                          {getLocalizedName(emp.nameEn, emp.nameKh)} (ID: {emp.staffId})
-                        </option>
-                      ))}
-                    </select>
+                      <div className={`w-4 h-4 rounded flex items-center justify-center border-2 transition-all ${
+                        filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId))
+                          ? 'border-indigo-500 bg-indigo-500' : 'border-slate-500'
+                      }`}>
+                        {filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId)) && (
+                          <span className="text-white text-[10px] font-bold">✓</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-slate-300 font-khmer">ជ្រើសរើសទាំងអស់ (Select All)</span>
+                    </div>
+                    {/* Scrollable employee list */}
+                    <div className="max-h-48 overflow-y-auto rounded-xl border border-white/10 divide-y divide-white/5 bg-slate-950/60">
+                      {filteredEmpList.length === 0 ? (
+                        <div className="py-4 text-center text-slate-500 text-xs font-khmer">រកមិនឃើញបុគ្គលិក</div>
+                      ) : (
+                        filteredEmpList.map(emp => {
+                          const selected = targetStaffIds.includes(emp.staffId);
+                          return (
+                            <div
+                              key={emp.staffId}
+                              onClick={() => toggleEmployeeSelection(emp.staffId)}
+                              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
+                                selected ? 'bg-indigo-500/15' : 'hover:bg-white/5'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${
+                                selected ? 'border-indigo-500 bg-indigo-500' : 'border-slate-500'
+                              }`}>
+                                {selected && <span className="text-white text-[10px] font-bold">✓</span>}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-xs font-semibold truncate ${selected ? 'text-indigo-300' : 'text-white'}`}>
+                                  {getLocalizedName(emp.nameEn, emp.nameKh)}
+                                </p>
+                                <p className="text-[10px] text-slate-500">ID: {emp.staffId}</p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-1">
