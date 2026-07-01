@@ -78,61 +78,6 @@ export const verifyAndCheckInFace = async (req, res) => {
   }
 
   try {
-    // Geofencing limits check (Support multiple zones)
-    const settingsList = await prisma.kioskSetting.findMany();
-    if (settingsList.length > 0) {
-      if (
-        latitude === undefined || 
-        longitude === undefined || 
-        latitude === null || 
-        longitude === null || 
-        isNaN(parseFloat(latitude)) || 
-        isNaN(parseFloat(longitude))
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: 'Location data (GPS) is required to check-in. សូមបើក Location (GPS) លើឧបករណ៍របស់អ្នក។'
-        });
-      }
-
-      const clientLat = parseFloat(latitude);
-      const clientLng = parseFloat(longitude);
-      
-      let isInsideAnyZone = false;
-      let closestZone = null;
-      let minDistance = Infinity;
-
-      for (const settings of settingsList) {
-        const distance = getHaversineDistance(
-          clientLat, 
-          clientLng, 
-          settings.latitude, 
-          settings.longitude
-        );
-        if (distance <= settings.radius) {
-          isInsideAnyZone = true;
-          break;
-        }
-        const delta = distance - settings.radius;
-        if (delta < minDistance) {
-          minDistance = delta;
-          closestZone = {
-            name: settings.name,
-            distance: Math.round(distance),
-            radius: settings.radius
-          };
-        }
-      }
-
-      if (!isInsideAnyZone) {
-        return res.status(403).json({
-          success: false,
-          message: closestZone 
-            ? `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone). Closest branch "${closestZone.name}" is ${closestZone.distance}m away (limit is ${closestZone.radius}m).`
-            : `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone).`
-        });
-      }
-    }
     // 1. Fetch all registered faces
     const enrolledFaces = await prisma.employeeFaceData.findMany({
       include: {
@@ -181,6 +126,87 @@ export const verifyAndCheckInFace = async (req, res) => {
     }
 
     const staffId = bestMatch.staffId;
+
+    // Fetch employee detail to verify their branch assignment
+    const employee = await prisma.employee.findUnique({
+      where: { staffId }
+    });
+
+    if (!employee) {
+      return res.status(400).json({ success: false, message: 'Employee not found' });
+    }
+
+    const settingsList = await prisma.kioskSetting.findMany();
+    if (settingsList.length > 0) {
+      if (
+        latitude === undefined || 
+        longitude === undefined || 
+        latitude === null || 
+        longitude === null || 
+        isNaN(parseFloat(latitude)) || 
+        isNaN(parseFloat(longitude))
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Location data (GPS) is required to check-in. សូមបើក Location (GPS) លើឧបករណ៍របស់អ្នក។'
+        });
+      }
+
+      const clientLat = parseFloat(latitude);
+      const clientLng = parseFloat(longitude);
+      
+      // Parse assigned branches (comma-separated string)
+      const employeeBranches = employee.branch
+        ? employee.branch.split(',').map(b => b.trim().toLowerCase())
+        : [];
+
+      // Filter geofence zones matching employee's branch assignment
+      const allowedSettingsList = settingsList.filter(setting =>
+        employeeBranches.includes(setting.name.toLowerCase())
+      );
+
+      if (allowedSettingsList.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `គណនីរបស់អ្នកមិនទាន់ត្រូវបានកំណត់ឱ្យចុះវត្តមាននៅសាខាណាមួយឡើយ! (Employee is not assigned to any active branch settings).`
+        });
+      }
+
+      let isInsideAnyZone = false;
+      let closestZone = null;
+      let minDistance = Infinity;
+
+      for (const settings of allowedSettingsList) {
+        const distance = getHaversineDistance(
+          clientLat, 
+          clientLng, 
+          settings.latitude, 
+          settings.longitude
+        );
+        if (distance <= settings.radius) {
+          isInsideAnyZone = true;
+          break;
+        }
+        const delta = distance - settings.radius;
+        if (delta < minDistance) {
+          minDistance = delta;
+          closestZone = {
+            name: settings.name,
+            distance: Math.round(distance),
+            radius: settings.radius
+          };
+        }
+      }
+
+      if (!isInsideAnyZone) {
+        return res.status(403).json({
+          success: false,
+          message: closestZone 
+            ? `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone). Closest branch "${closestZone.name}" is ${closestZone.distance}m away (limit is ${closestZone.radius}m).`
+            : `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone).`
+        });
+      }
+    }
 
     // 2. Perform attendance scanning update
     const result = await processAttendanceScan({

@@ -107,7 +107,21 @@ export const scanQRCode = async (req, res) => {
   }
 
   try {
-    // Geofencing limits check (Support multiple zones)
+    // 1. Verify token signature
+    const staffId = verifySecureToken(qrToken);
+    if (!staffId) {
+      return res.status(400).json({ success: false, message: 'Invalid QR signature or corrupted data' });
+    }
+
+    // Verify employee branch settings match coordinates
+    const employee = await prisma.employee.findUnique({
+      where: { staffId }
+    });
+
+    if (!employee) {
+      return res.status(400).json({ success: false, message: 'Employee not found' });
+    }
+
     const settingsList = await prisma.kioskSetting.findMany();
     if (settingsList.length > 0) {
       if (
@@ -127,11 +141,28 @@ export const scanQRCode = async (req, res) => {
       const clientLat = parseFloat(latitude);
       const clientLng = parseFloat(longitude);
       
+      // Parse assigned branches (comma-separated string)
+      const employeeBranches = employee.branch
+        ? employee.branch.split(',').map(b => b.trim().toLowerCase())
+        : [];
+
+      // Filter geofence zones matching employee's branch assignment
+      const allowedSettingsList = settingsList.filter(setting =>
+        employeeBranches.includes(setting.name.toLowerCase())
+      );
+
+      if (allowedSettingsList.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `គណនីរបស់អ្នកមិនទាន់ត្រូវបានកំណត់ឱ្យចុះវត្តមាននៅសាខាណាមួយឡើយ! (Employee is not assigned to any active branch settings).`
+        });
+      }
+
       let isInsideAnyZone = false;
       let closestZone = null;
       let minDistance = Infinity;
 
-      for (const settings of settingsList) {
+      for (const settings of allowedSettingsList) {
         const distance = getHaversineDistance(
           clientLat, 
           clientLng, 
@@ -161,11 +192,6 @@ export const scanQRCode = async (req, res) => {
             : `ក្រៅទីតាំងអនុញ្ញាត! (Out of allowed zone).`
         });
       }
-    }
-    // 1. Verify token signature
-    const staffId = verifySecureToken(qrToken);
-    if (!staffId) {
-      return res.status(400).json({ success: false, message: 'Invalid QR signature or corrupted data' });
     }
 
     // 2. Query QR record from database to verify active status

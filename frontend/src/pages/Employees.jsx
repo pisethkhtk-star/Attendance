@@ -651,23 +651,43 @@ const Employees = () => {
                   </select>
                 </div>
 
-                {/* Branch Selection */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">{t("branch")} *</label>
-                  <select
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
-                  >
-                    {branches.length === 0 && !branch ? (
-                      <option value="">No branch available</option>
-                    ) : (
-                      // Handle fallback for legacy data if the user edits an employee with a branch that was not created in Kiosk Settings
-                      [...branches, ...(branch && !branches.some(b => b.name === branch) ? [{ id: 'legacy', name: branch }] : [])].map(b => (
-                        <option key={b.id} value={b.name} className="bg-slate-900">{b.name}</option>
-                      ))
-                    )}
-                  </select>
+                {/* Branch Selection (Multi-select via Checkboxes) */}
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase font-khmer">
+                    {t("branch")} * (ជ្រើសរើសសាខាសម្រាប់ចុះវត្តមាន)
+                  </label>
+                  {branches.length === 0 && !branch ? (
+                    <p className="text-xs text-slate-500 font-khmer">មិនទាន់មានសាខាត្រូវបានបង្កើតឡើយ (No branches created)</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-950/60 border border-white/10 rounded-xl">
+                      {[...branches, ...(branch ? branch.split(',').map(x => x.trim()).filter(name => name && !branches.some(b => b.name.toLowerCase() === name.toLowerCase())).map(name => ({ id: `legacy-${name}`, name })) : [])].map(b => {
+                        const isChecked = branch
+                          ? branch.split(',').map(x => x.trim().toLowerCase()).includes(b.name.toLowerCase())
+                          : false;
+
+                        return (
+                          <label key={b.id} className="flex items-center gap-2.5 text-xs text-slate-200 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                const currentList = branch ? branch.split(',').map(x => x.trim()).filter(Boolean) : [];
+                                let newList;
+                                if (currentList.some(x => x.toLowerCase() === b.name.toLowerCase())) {
+                                  newList = currentList.filter(x => x.toLowerCase() !== b.name.toLowerCase());
+                                } else {
+                                  newList = [...currentList, b.name];
+                                }
+                                setBranch(newList.join(', '));
+                              }}
+                              className="rounded border-white/20 bg-slate-900 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer h-4 w-4"
+                            />
+                            <span>{b.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Join Date */}
