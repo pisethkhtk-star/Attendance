@@ -1,5 +1,71 @@
 @import "tailwindcss";
 
+@theme {
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-300: var(--slate-300);
+  --color-slate-100: var(--slate-100);
+}
+
+:root {
+  /* Dark mode default variables */
+  --slate-950: #020617;
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-100: #f1f5f9;
+
+  --bg-card: rgba(30, 41, 59, 0.35);
+  --border-card: rgba(255, 255, 255, 0.06);
+  --shadow-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --bg-panel: rgba(15, 23, 42, 0.55);
+  --border-panel: rgba(255, 255, 255, 0.08);
+  --bg-table-header: rgba(15, 23, 42, 0.6);
+  --bg-app: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+}
+
+html.light {
+  /* Light mode variable overrides */
+  --slate-950: #f8fafc;
+  --slate-900: #ffffff;
+  --slate-800: #f1f5f9;
+  --slate-700: #e2e8f0;
+  --slate-600: #cbd5e1;
+  --slate-500: #94a3b8;
+  --slate-400: #64748b;
+  --slate-300: #334155;
+  --slate-100: #0f172a;
+
+  --bg-card: rgba(255, 255, 255, 0.7);
+  --border-card: rgba(15, 23, 42, 0.08);
+  --shadow-glow: 0 8px 32px 0 rgba(15, 23, 42, 0.03);
+  --bg-panel: rgba(255, 255, 255, 0.85);
+  --border-panel: rgba(15, 23, 42, 0.1);
+  --bg-table-header: rgba(241, 245, 249, 0.9);
+  --bg-app: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e0e7ff 100%);
+}
+
+/* Global transitions for clean theme switching */
+body, header, aside, main, div, p, span, table, th, td, input, select, textarea, button {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+body {
+  background: var(--bg-app) !important;
+  color: var(--slate-100) !important;
+}
+
 /* Custom print stylesheet utilities */
 @media print {
   .no-print {
@@ -40,54 +106,134 @@
 
 /* Glassmorphism custom classes */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--bg-panel);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-panel);
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.3);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-glow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card-hover:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(99, 102, 241, 0.2);
   box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.12);
   transform: translateY(-2px);
 }
 
 /* Glowing utilities */
 .glow-indigo {
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.08);
 }
 
 .glow-emerald {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.08);
 }
 
 .glow-rose {
-  box-shadow: 0 0 15px rgba(244, 63, 94, 0.15);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.08);
 }
 
-/* Custom Table Layout utilities for dark mode */
+/* Custom Table Layout utilities for dark/light mode */
 .glass-table {
-  background: rgba(15, 23, 42, 0.25);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
 }
 .glass-table th {
-  background: rgba(15, 23, 42, 0.6);
-  color: rgba(241, 245, 249, 0.8);
+  background: var(--bg-table-header);
+  color: var(--slate-100);
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-card);
 }
 .glass-table td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-card);
 }
 .glass-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(99, 102, 241, 0.02);
+}
+
+/* Light mode overrides for transparent components and specific text tags */
+html.light .text-white {
+  color: #0f172a !important; /* dark slate text instead of white */
+}
+html.light h1.text-white,
+html.light h2.text-white,
+html.light h3.text-white,
+html.light h4.text-white,
+html.light p.text-white,
+html.light span.text-white,
+html.light td.text-white {
+  color: #0f172a !important;
+}
+
+/* Maintain proper white color on primary components like button labels, icons in status badges, etc. */
+html.light button.bg-gradient-to-r .text-white,
+html.light button.bg-indigo-600 .text-white,
+html.light button.bg-rose-600 .text-white,
+html.light .bg-indigo-600 .text-white,
+html.light .bg-rose-600 .text-white,
+html.light .bg-indigo-500 .text-white,
+html.light .bg-emerald-500 .text-white,
+html.light .bg-purple-600 .text-white,
+html.light .bg-indigo-600,
+html.light .bg-rose-600,
+html.light .bg-amber-500,
+html.light .bg-emerald-500,
+html.light .bg-purple-600,
+html.light .text-indigo-300,
+html.light .text-rose-300,
+html.light .text-emerald-300,
+html.light .bg-slate-950/40 .text-slate-300,
+html.light .bg-slate-950/40 strong {
+  color: inherit;
+}
+
+/* Specific class utility conversions for light mode borders and opacity elements */
+html.light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+html.light .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.04) !important;
+}
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html.light .divide-white\/5 > * + * {
+  border-color: rgba(15, 23, 42, 0.04) !important;
+}
+html.light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+html.light .hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+html.light .bg-slate-950\/60 {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
+html.light .bg-slate-950\/40 {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+html.light .bg-slate-950/80 {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+}
+html.light .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+html.light .text-slate-300 {
+  color: #1e293b !important;
+}
+html.light .text-slate-100 {
+  color: #0f172a !important;
 }

@@ -11,7 +11,8 @@ import {
   ScrollView,
   StatusBar,
   Modal,
-  Image
+  Image,
+  FlatList
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -19,7 +20,7 @@ import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
 export default function App() {
-  // Routes: 'loading' | 'login' | 'dashboard' | 'scanner'
+  // Screens: 'loading' | 'login' | 'dashboard' | 'attendance_history' | 'leave_history' | 'scanner'
   const [currentScreen, setCurrentScreen] = useState('loading');
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -27,38 +28,79 @@ export default function App() {
   // Login credentials
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [apiUrl, setApiUrl] = useState('http://10.145.48.140:5050/api');
 
-  // API URL Config (Allows changing on Login screen for LAN testing)
-  const [apiUrl, setApiUrl] = useState('http://192.168.88.165:5050/api');
-
-  // Scanner status
+  // Scanner states
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
-  const [scanResult, setScanResult] = useState(null); // { success: boolean, message: string }
+  const [scanResult, setScanResult] = useState(null);
 
-  // Personal QR display states
+  // Personal QR states
   const [showMyQrModal, setShowMyQrModal] = useState(false);
   const [myQrImage, setMyQrImage] = useState('');
   const [myQrLoading, setMyQrLoading] = useState(false);
 
-  const handleOpenMyQr = async () => {
-    setShowMyQrModal(true);
-    setMyQrLoading(true);
-    setMyQrImage('');
-    try {
-      const res = await axios.get(`${apiUrl}/qrcode/generate/${user.staffId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data && res.data.qrImage) {
-        setMyQrImage(res.data.qrImage);
-      }
-    } catch (err) {
-      console.error('Error fetching personal QR:', err);
-      Alert.alert('កំហុស', 'មិនអាចទាញយក QR Code ផ្ទាល់ខ្លួនបានទេ។');
-    } finally {
-      setMyQrLoading(false);
-    }
+  // Dismissable alert banner state
+  const [showBirthdayAlert, setShowBirthdayAlert] = useState(true);
+
+  // Attendance History states
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
+  // Leave states
+  const [leaves, setLeaves] = useState([]);
+  const [leavesLoading, setLeavesLoading] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
+  const [newLeaveType, setNewLeaveType] = useState('Annual Leave');
+  const [newLeaveDate, setNewLeaveDate] = useState('');
+  const [newLeaveAmount, setNewLeaveAmount] = useState('1.0');
+  const [newLeaveReason, setNewLeaveReason] = useState('');
+  const [submittingLeave, setSubmittingLeave] = useState(false);
+
+  // Custom rotated vector chevron for header/list items
+  const ChevronRight = () => (
+    <View style={styles.chevronContainer}>
+      <View style={styles.chevronLine} />
+    </View>
+  );
+
+  const ChevronLeft = () => (
+    <View style={styles.chevronLeftContainer}>
+      <View style={styles.chevronLeftLine} />
+    </View>
+  );
+
+  // Helper for 12-hour AM/PM formatting
+  const formatTime12Hour = (timeStr) => {
+    if (!timeStr) return '-';
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+    
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+    
+    if (isNaN(hours)) return timeStr;
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    const formattedHours = String(hours).padStart(2, '0');
+    return `${formattedHours}:${minutes} ${ampm}`;
+  };
+
+  // Helper for safe formatted date display (eg: 01 Jul 2026)
+  const formatDateString = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   // Load saved token & API URL on mount
@@ -101,6 +143,87 @@ export default function App() {
     })();
   }, []);
 
+  // Fetch functions
+  const fetchAttendanceHistory = async () => {
+    setAttendanceLoading(true);
+    try {
+      const res = await axios.get(`${apiUrl}/attendance/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) {
+        setAttendanceLogs(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching attendance history:', err);
+      Alert.alert('កំហុស', 'មិនអាចទាញយកទិន្នន័យវត្តមានបានទេ។');
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const fetchLeaveHistory = async () => {
+    setLeavesLoading(true);
+    try {
+      const res = await axios.get(`${apiUrl}/leaves`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) {
+        setLeaves(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching leaves:', err);
+      Alert.alert('កំហុស', 'មិនអាចទាញយកទិន្នន័យច្បាប់សម្រាកបានទេ។');
+    } finally {
+      setLeavesLoading(false);
+    }
+  };
+
+  const fetchLeaveTypes = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/leave-types`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) {
+        setLeaveTypes(res.data);
+        if (res.data.length > 0) {
+          setNewLeaveType(res.data[0].nameEn || res.data[0].nameKh || 'Annual Leave');
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching leave types:', err);
+    }
+  };
+
+  // Submit leave request
+  const handleRequestLeaveSubmit = async () => {
+    if (!newLeaveDate || !newLeaveType || !newLeaveAmount) {
+      Alert.alert('បញ្ចូលព័ត៌មាន', 'សូមបញ្ចូលថ្ងៃខែ ប្រភេទច្បាប់ និងចំនួនថ្ងៃ។');
+      return;
+    }
+    setSubmittingLeave(true);
+    try {
+      await axios.post(`${apiUrl}/leaves`, {
+        staffId: user.staffId,
+        leaveDate: newLeaveDate,
+        leaveType: newLeaveType,
+        amountDays: newLeaveAmount,
+        reason: newLeaveReason
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      Alert.alert('ជោគជ័យ', 'ការស្នើសុំច្បាប់សម្រាកត្រូវបានផ្ញើ!');
+      setShowAddLeaveModal(false);
+      setNewLeaveDate('');
+      setNewLeaveReason('');
+      fetchLeaveHistory();
+    } catch (err) {
+      console.error('Error submitting leave:', err);
+      Alert.alert('បរាជ័យ', err.response?.data?.message || 'មិនអាចផ្ញើសំណើសុំច្បាប់បានទេ។');
+    } finally {
+      setSubmittingLeave(false);
+    }
+  };
+
   // Login execution
   const handleLogin = async () => {
     if (!email || !password) {
@@ -110,7 +233,6 @@ export default function App() {
 
     setCurrentScreen('loading');
     try {
-      // Save API URL configuration
       await SecureStore.setItemAsync('apiUrl', apiUrl);
 
       const res = await axios.post(`${apiUrl}/auth/login`, {
@@ -122,7 +244,6 @@ export default function App() {
         const userToken = res.data.token;
         const userData = JSON.stringify(res.data.user);
 
-        // Store session securely
         await SecureStore.setItemAsync('userToken', userToken);
         await SecureStore.setItemAsync('userData', userData);
 
@@ -143,21 +264,28 @@ export default function App() {
 
   // Logout execution
   const handleLogout = async () => {
-    try {
-      await SecureStore.deleteItemAsync('userToken');
-      await SecureStore.deleteItemAsync('userData');
-      setToken(null);
-      setUser(null);
-      setCurrentScreen('login');
-    } catch (err) {
-      console.error('Error logging out:', err);
-    }
-  };
-
-  // Fill quick login credentials
-  const fillQuickCredentials = (qEmail, qPassword) => {
-    setEmail(qEmail);
-    setPassword(qPassword);
+    Alert.alert(
+      'ចាកចេញ',
+      'តើអ្នកចង់ចាកចេញពីគណនីមែនទេ?',
+      [
+        { text: 'បោះបង់', style: 'cancel' },
+        {
+          text: 'ចាកចេញ',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await SecureStore.deleteItemAsync('userToken');
+              await SecureStore.deleteItemAsync('userData');
+              setToken(null);
+              setUser(null);
+              setCurrentScreen('login');
+            } catch (err) {
+              console.error('Error logging out:', err);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // QR Code scanned handler
@@ -167,14 +295,12 @@ export default function App() {
     setScanResult(null);
 
     try {
-      // 1. Fetch current GPS location coordinates
       let locationRes = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
 
       const { latitude, longitude } = locationRes.coords;
 
-      // 2. Send QR scan check-in payload to backend
       const endpoint = data.startsWith('branch_qr:') 
         ? `${apiUrl}/qrcode/scan-branch` 
         : `${apiUrl}/qrcode/scan`;
@@ -233,7 +359,40 @@ export default function App() {
     setCurrentScreen('scanner');
   };
 
-  // Render screens
+  const handleOpenMyQr = async () => {
+    setShowMyQrModal(true);
+    setMyQrLoading(true);
+    setMyQrImage('');
+    try {
+      const res = await axios.get(`${apiUrl}/qrcode/generate/${user.staffId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.qrImage) {
+        setMyQrImage(res.data.qrImage);
+      }
+    } catch (err) {
+      console.error('Error fetching personal QR:', err);
+      Alert.alert('កំហុស', 'មិនអាចទាញយក QR Code ផ្ទាល់ខ្លួនបានទេ។');
+    } finally {
+      setMyQrLoading(false);
+    }
+  };
+
+  // Navigations
+  const handleNavAttendance = () => {
+    setCurrentScreen('attendance_history');
+    fetchAttendanceHistory();
+  };
+
+  const handleNavLeave = () => {
+    setCurrentScreen('leave_history');
+    fetchLeaveHistory();
+    fetchLeaveTypes();
+    // Preset new request date
+    setNewLeaveDate(new Date().toISOString().split('T')[0]);
+  };
+
+  // Rendering screen branches
   if (currentScreen === 'loading') {
     return (
       <View style={styles.loadingScreen}>
@@ -245,16 +404,14 @@ export default function App() {
 
   if (currentScreen === 'login') {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.bgGlow1} />
-        <View style={styles.bgGlow2} />
+      <SafeAreaView style={styles.loginContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.brandContainer}>
             <View style={styles.logoBadge}>
               <Text style={styles.logoText}>🕐</Text>
             </View>
-            <Text style={styles.brandTitle}>Kiosk Mobile</Text>
+            <Text style={styles.brandTitle}>CheckinMe</Text>
             <Text style={styles.brandSubtitle}>ប្រព័ន្ធគ្រប់គ្រងវត្តមានបុគ្គលិក</Text>
           </View>
 
@@ -266,7 +423,7 @@ export default function App() {
               <TextInput
                 style={styles.input}
                 placeholder="example@attendance.com"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -279,7 +436,7 @@ export default function App() {
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#94a3b8"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -291,7 +448,7 @@ export default function App() {
               <TextInput
                 style={styles.input}
                 placeholder="http://10.145.48.140:5050/api"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#94a3b8"
                 value={apiUrl}
                 onChangeText={setApiUrl}
                 autoCapitalize="none"
@@ -302,13 +459,13 @@ export default function App() {
               <Text style={styles.buttonText}>ចូលគណនី (Login)</Text>
             </TouchableOpacity>
 
-            {/* Quick accounts selection for testing (matching website) */}
+            {/* Quick Login Grid */}
             <View style={styles.quickSection}>
               <Text style={styles.quickHeader}>សាកល្បងគណនីគំរូ / Quick Accounts</Text>
               <View style={styles.quickGrid}>
                 <TouchableOpacity
                   style={styles.quickBtn}
-                  onPress={() => fillQuickCredentials('admin@attendance.com', 'admin123')}
+                  onPress={() => { setEmail('admin@attendance.com'); setPassword('admin123'); }}
                 >
                   <Text style={styles.quickRoleText}>Admin</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>admin@attendance.com</Text>
@@ -316,7 +473,7 @@ export default function App() {
 
                 <TouchableOpacity
                   style={styles.quickBtn}
-                  onPress={() => fillQuickCredentials('hr@attendance.com', 'hr123')}
+                  onPress={() => { setEmail('hr@attendance.com'); setPassword('hr123'); }}
                 >
                   <Text style={styles.quickRoleText}>HR</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>hr@attendance.com</Text>
@@ -324,7 +481,7 @@ export default function App() {
 
                 <TouchableOpacity
                   style={styles.quickBtn}
-                  onPress={() => fillQuickCredentials('manager@attendance.com', 'manager123')}
+                  onPress={() => { setEmail('manager@attendance.com'); setPassword('manager123'); }}
                 >
                   <Text style={styles.quickRoleText}>Manager</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>manager@attendance.com</Text>
@@ -332,7 +489,7 @@ export default function App() {
 
                 <TouchableOpacity
                   style={styles.quickBtn}
-                  onPress={() => fillQuickCredentials('rath@attendance.com', 'emp123')}
+                  onPress={() => { setEmail('rath@attendance.com'); setPassword('emp123'); }}
                 >
                   <Text style={styles.quickRoleText}>Employee</Text>
                   <Text style={styles.quickEmailText} numberOfLines={1}>rath@attendance.com</Text>
@@ -347,49 +504,146 @@ export default function App() {
 
   if (currentScreen === 'dashboard') {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.dashboardHeader}>
-          <View>
-            <Text style={styles.welcomeText}>សួស្ដី, (Hello)</Text>
-            <Text style={styles.nameText}>{user?.nameKh || user?.nameEn}</Text>
-          </View>
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-            <Text style={styles.logoutBtnText}>Logout</Text>
+      <SafeAreaView style={styles.dashboardContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        
+        {/* Header matching image exactly */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>CheckinMe</Text>
+          <TouchableOpacity style={styles.headerChatBtn} onPress={handleLogout}>
+            {/* Styled Blue chat icon placeholder */}
+            <Text style={styles.headerChatEmoji}>💬</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.dashboardBody}>
-          <View style={styles.profileCard}>
-            <Text style={styles.profileHeader}>ព័ត៌មានគណនី</Text>
-            <View style={styles.profileRow}>
-              <Text style={styles.profileLabel}>អត្តលេខបុគ្គលិក:</Text>
-              <Text style={styles.profileValue}>{user?.staffId}</Text>
+        <ScrollView contentContainerStyle={styles.dashboardScroll}>
+          {/* Dismissable Birthday alert banner */}
+          {showBirthdayAlert && (
+            <View style={styles.birthdayAlert}>
+              <View style={styles.birthdayContent}>
+                <Text style={styles.birthdayTitle}>Check your Birthday! 🎂</Text>
+                <Text style={styles.birthdaySubtitle}>Please confirm your birthday.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowBirthdayAlert(false)} style={styles.dismissAlertBtn}>
+                <Text style={styles.dismissAlertText}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.profileRow}>
-              <Text style={styles.profileLabel}>តួនាទី:</Text>
-              <Text style={styles.profileValue}>{user?.role}</Text>
+          )}
+
+          {/* Golden/Black Premium Card (KS Resident style) */}
+          <View style={styles.premiumCard}>
+            <View style={styles.premiumCardBody}>
+              <View style={styles.goldLogoCircle}>
+                <Text style={styles.goldLogoLetters}>KS</Text>
+              </View>
+              <Text style={styles.premiumBrandName}>KS RESIDENT</Text>
             </View>
-            <View style={styles.profileRow}>
-              <Text style={styles.profileLabel}>សាខាចុះវត្តមាន:</Text>
-              <Text style={styles.profileValue}>{user?.branch || 'មិនទាន់កំណត់'}</Text>
-            </View>
-            <View style={styles.profileRow}>
-              <Text style={styles.profileLabel}>ម៉ោងការងារ:</Text>
-              <Text style={styles.profileValue}>
-                {user?.shift1Start} - {user?.shift2End}
-              </Text>
+            
+            {/* Card Footer inside */}
+            <View style={styles.premiumCardFooter}>
+              <View style={styles.footerBrandRow}>
+                <View style={styles.miniLogoBadge}>
+                  <Text style={styles.miniLogoText}>KS</Text>
+                </View>
+                <View style={styles.cardDetailsColumn}>
+                  <Text style={styles.footerBrandTitle}>{user?.nameKh || user?.nameEn || 'KS Resident'}</Text>
+                  <Text style={styles.footerBrandSubtitle}>Staff ID: {user?.staffId || 'N/A'}</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.myCardBtn} onPress={handleOpenMyQr}>
+                <Text style={styles.myCardBtnText}>My Card</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.myQrBtn} onPress={handleOpenMyQr}>
-            <Text style={styles.myQrBtnText}>👤 បង្ហាញ QR Code ផ្ទាល់ខ្លួន (My QR Code)</Text>
-          </TouchableOpacity>
+          {/* Styled List Menus Panel */}
+          <View style={styles.menuPanel}>
+            {/* Attendance Menu */}
+            <TouchableOpacity style={styles.menuRow} onPress={handleNavAttendance}>
+              <View style={styles.menuRowLeft}>
+                <View style={[styles.menuIconBg, { backgroundColor: '#ffedd5' }]}>
+                  <Text style={styles.menuEmojiText}>📅</Text>
+                </View>
+                <Text style={styles.menuRowText}>Attendance</Text>
+              </View>
+              <View style={styles.menuRowRight}>
+                <ChevronRight />
+              </View>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.scanActionBtn} onPress={handleOpenScanner}>
-            <Text style={styles.scanActionEmoji}>📷</Text>
-            <Text style={styles.scanActionTitle}>ស្កេន QR Code ចុះវត្តមាន</Text>
-            <Text style={styles.scanActionDesc}>Scan Check-in / Check-out QR</Text>
+            {/* Leave Menu */}
+            <TouchableOpacity style={styles.menuRow} onPress={handleNavLeave}>
+              <View style={styles.menuRowLeft}>
+                <View style={[styles.menuIconBg, { backgroundColor: '#dbeafe' }]}>
+                  <Text style={styles.menuEmojiText}>📝</Text>
+                </View>
+                <Text style={styles.menuRowText}>Leave</Text>
+              </View>
+              <View style={styles.menuRowRight}>
+                <ChevronRight />
+              </View>
+            </TouchableOpacity>
+
+            {/* Overtime Menu */}
+            <TouchableOpacity style={styles.menuRow} onPress={() => Alert.alert('Overtime', 'មុខងារនេះនឹងមកដល់ឆាប់ៗនេះ (Overtime feature is coming soon!)')}>
+              <View style={styles.menuRowLeft}>
+                <View style={[styles.menuIconBg, { backgroundColor: '#dcfce7' }]}>
+                  <Text style={styles.menuEmojiText}>⏱️</Text>
+                </View>
+                <Text style={styles.menuRowText}>Overtime</Text>
+              </View>
+              <View style={styles.menuRowRight}>
+                <ChevronRight />
+              </View>
+            </TouchableOpacity>
+
+            {/* My Calendar Menu */}
+            <TouchableOpacity style={styles.menuRow} onPress={() => Alert.alert('Calendar', 'បង្ហាញប្រតិទិនសង្ខេប (Show calendar schedule)')}>
+              <View style={styles.menuRowLeft}>
+                <View style={[styles.menuIconBg, { backgroundColor: '#f3e8ff' }]}>
+                  <Text style={styles.menuEmojiText}>🗓️</Text>
+                </View>
+                <Text style={styles.menuRowText}>My Calendar</Text>
+              </View>
+              <View style={styles.menuRowRight}>
+                <ChevronRight />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Section Header: Dashboard */}
+          <Text style={styles.sectionHeaderTitle}>Dashboard</Text>
+
+          {/* QR scanner launch button */}
+          <TouchableOpacity style={styles.quickScanPanelBtn} onPress={handleOpenScanner}>
+            <Text style={styles.quickScanEmoji}>📷</Text>
+            <View>
+              <Text style={styles.quickScanTitle}>ស្កេន QR Code ចុះវត្តមាន</Text>
+              <Text style={styles.quickScanSubtitle}>Scan to Check-in / Check-out</Text>
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Bottom Tab Bar matching design image */}
+        <View style={styles.tabBar}>
+          <TouchableOpacity style={styles.tabItem} onPress={() => setCurrentScreen('dashboard')}>
+            <Text style={[styles.tabIcon, { color: '#3b82f6' }]}>🏠</Text>
+            <Text style={[styles.tabText, { color: '#3b82f6' }]}>Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabItem} onPress={() => Alert.alert('Benefits', 'អត្ថប្រយោជន៍របស់បុគ្គលិក (Employee Benefits)')}>
+            <Text style={styles.tabIcon}>🔳</Text>
+            <Text style={styles.tabText}>Benefit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabItem} onPress={() => Alert.alert('Notifications', 'គ្មានសារដំណឹងថ្មីទេ (No new notifications)')}>
+            <View style={styles.tabBadgeContainer}>
+              <Text style={styles.tabIcon}>🔔</Text>
+              <View style={styles.tabRedDot} />
+            </View>
+            <Text style={styles.tabText}>Notify</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabItem} onPress={handleLogout}>
+            <Text style={styles.tabIcon}>👤</Text>
+            <Text style={styles.tabText}>Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -425,6 +679,248 @@ export default function App() {
               >
                 <Text style={styles.closeModalBtnText}>បិទ (Close)</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  if (currentScreen === 'attendance_history') {
+    return (
+      <SafeAreaView style={styles.dashboardContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        
+        {/* Screen Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setCurrentScreen('dashboard')} style={styles.backBtn}>
+            <ChevronLeft />
+            <Text style={styles.backBtnText}> ត្រឡប់</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>វត្តមាន (Attendance)</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        {attendanceLoading ? (
+          <View style={styles.centerLoader}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loaderText}>កំពុងទាញយកទិន្នន័យ...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={attendanceLogs}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            style={{ flex: 1 }}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>មិនមានកំណត់ត្រាវត្តមានឡើយ។</Text>
+            }
+            renderItem={({ item }) => (
+              <View style={styles.logCard}>
+                <View style={styles.logCardHeader}>
+                  <Text style={styles.logCardDate}>📅 {formatDateString(item.attendanceDate)}</Text>
+                  
+                  {/* Status Badges */}
+                  <View style={{ flexDirection: 'row' }}>
+                    {item.isLate && (
+                      <View style={[styles.badge, { backgroundColor: '#fef3c7' }]}>
+                        <Text style={[styles.badgeText, { color: '#d97706' }]}>យឺត (Late)</Text>
+                      </View>
+                    )}
+                    {item.isEarlyLeave && (
+                      <View style={[styles.badge, { backgroundColor: '#fee2e2', marginLeft: 4 }]}>
+                        <Text style={[styles.badgeText, { color: '#dc2626' }]}>ចេញមុន (Early)</Text>
+                      </View>
+                    )}
+                    {!item.isLate && !item.isEarlyLeave && (
+                      <View style={[styles.badge, { backgroundColor: '#d1fae5' }]}>
+                        <Text style={[styles.badgeText, { color: '#059669' }]}>ទាន់ពេល</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Details layout */}
+                <View style={styles.logCardBody}>
+                  <View style={styles.logColumn}>
+                    <Text style={styles.logLabel}>Check In 1</Text>
+                    <Text style={styles.logValue}>{formatTime12Hour(item.checkin1)}</Text>
+                  </View>
+                  <View style={styles.logColumn}>
+                    <Text style={styles.logLabel}>Check Out 1</Text>
+                    <Text style={styles.logValue}>{formatTime12Hour(item.checkout1)}</Text>
+                  </View>
+                  <View style={styles.logColumn}>
+                    <Text style={styles.logLabel}>Check In 2</Text>
+                    <Text style={styles.logValue}>{formatTime12Hour(item.checkin2)}</Text>
+                  </View>
+                  <View style={styles.logColumn}>
+                    <Text style={styles.logLabel}>Check Out 2</Text>
+                    <Text style={styles.logValue}>{formatTime12Hour(item.checkout2)}</Text>
+                  </View>
+                </View>
+
+                {item.note ? (
+                  <Text style={styles.logNote}>📝 ហេតុផល៖ {item.note}</Text>
+                ) : null}
+              </View>
+            )}
+          />
+        )}
+      </SafeAreaView>
+    );
+  }
+
+  if (currentScreen === 'leave_history') {
+    return (
+      <SafeAreaView style={styles.dashboardContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        
+        {/* Screen Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setCurrentScreen('dashboard')} style={styles.backBtn}>
+            <ChevronLeft />
+            <Text style={styles.backBtnText}> ត្រឡប់</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>ច្បាប់សម្រាក (Leaves)</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        {/* Action Button: Request Leave */}
+        <TouchableOpacity style={styles.requestLeaveBtn} onPress={() => setShowAddLeaveModal(true)}>
+          <Text style={styles.requestLeaveBtnText}>+ ស្នើសុំច្បាប់សម្រាក (Request Leave)</Text>
+        </TouchableOpacity>
+
+        {leavesLoading ? (
+          <View style={styles.centerLoader}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loaderText}>កំពុងទាញយកទិន្នន័យ...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={leaves}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            style={{ flex: 1 }}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>មិនទាន់មានសំណើសុំច្បាប់សម្រាកនៅឡើយ។</Text>
+            }
+            renderItem={({ item }) => (
+              <View style={styles.logCard}>
+                <View style={styles.logCardHeader}>
+                  <Text style={styles.leaveCardType}>📝 {item.leaveType}</Text>
+                  
+                  {/* Status Pills */}
+                  <View style={[
+                    styles.badge, 
+                    item.status === 'Approved' ? { backgroundColor: '#d1fae5' } :
+                    item.status === 'Rejected' ? { backgroundColor: '#fee2e2' } :
+                    { backgroundColor: '#e0f2fe' }
+                  ]}>
+                    <Text style={[
+                      styles.badgeText,
+                      item.status === 'Approved' ? { color: '#059669' } :
+                      item.status === 'Rejected' ? { color: '#dc2626' } :
+                      { color: '#0284c7' }
+                    ]}>{item.status}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.leaveCardBody}>
+                  <Text style={styles.leaveInfoText}>📅 ថ្ងៃសុំច្បាប់៖ {formatDateString(item.leaveDate)}</Text>
+                  <Text style={styles.leaveInfoText}>⏱️ រយៈពេល៖ {item.amountDays} ថ្ងៃ</Text>
+                  {item.reason ? (
+                    <Text style={styles.leaveReasonText}>💬 មូលហេតុ៖ {item.reason}</Text>
+                  ) : null}
+                  {item.managerName ? (
+                    <Text style={styles.leaveManagerText}>👤 អនុម័តដោយ៖ {item.managerName}</Text>
+                  ) : null}
+                </View>
+              </View>
+            )}
+          />
+        )}
+
+        {/* Request Leave Form Modal */}
+        <Modal
+          visible={showAddLeaveModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowAddLeaveModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.formModalContent}>
+              <Text style={styles.formModalTitle}>ស្នើសុំច្បាប់សម្រាក (New Leave)</Text>
+
+              {/* Leave Type picker simulated */}
+              <Text style={styles.formLabel}>ប្រភេទច្បាប់ (Leave Type)</Text>
+              <View style={styles.pickerSelectorContainer}>
+                {['Annual Leave', 'Sick Leave', 'Personal Leave'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[styles.pickerOption, newLeaveType === type ? styles.pickerOptionActive : null]}
+                    onPress={() => setNewLeaveType(type)}
+                  >
+                    <Text style={[styles.pickerOptionText, newLeaveType === type ? styles.pickerOptionTextActive : null]}>
+                      {type === 'Annual Leave' ? '🌴 Annual' : type === 'Sick Leave' ? '🤒 Sick' : '👤 Personal'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Date Input */}
+              <Text style={styles.formLabel}>ថ្ងៃខែឆ្នាំ (Date: YYYY-MM-DD)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 2026-07-03"
+                placeholderTextColor="#94a3b8"
+                value={newLeaveDate}
+                onChangeText={setNewLeaveDate}
+              />
+
+              {/* Duration Input */}
+              <Text style={styles.formLabel}>រយៈពេល (Duration: Days)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 1.0 or 0.5"
+                placeholderTextColor="#94a3b8"
+                value={newLeaveAmount}
+                onChangeText={setNewLeaveAmount}
+                keyboardType="numeric"
+              />
+
+              {/* Reason Input */}
+              <Text style={styles.formLabel}>មូលហេតុ (Reason)</Text>
+              <TextInput
+                style={[styles.formInput, { height: 70, textAlignVertical: 'top' }]}
+                placeholder="មូលហេតុនៃការសុំច្បាប់..."
+                placeholderTextColor="#94a3b8"
+                value={newLeaveReason}
+                onChangeText={setNewLeaveReason}
+                multiline={true}
+              />
+
+              {/* Buttons */}
+              <View style={styles.formButtonRow}>
+                <TouchableOpacity
+                  style={[styles.formBtn, styles.formBtnCancel]}
+                  onPress={() => setShowAddLeaveModal(false)}
+                >
+                  <Text style={styles.formBtnCancelText}>បោះបង់</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.formBtn, styles.formBtnSubmit]}
+                  onPress={handleRequestLeaveSubmit}
+                  disabled={submittingLeave}
+                >
+                  {submittingLeave ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.formBtnSubmitText}>ផ្ញើសំណើ</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -485,45 +981,26 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Global colors matching clean light mode
+  loadingScreen: {
     flex: 1,
-    backgroundColor: '#020617',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
-  bgGlow1: {
-    position: 'absolute',
-    top: '5%',
-    left: '-25%',
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: '#4f46e5',
-    opacity: 0.08,
+  loadingScreenText: {
+    color: '#64748b',
+    marginTop: 15,
+    fontSize: 14,
   },
-  bgGlow2: {
-    position: 'absolute',
-    bottom: '5%',
-    right: '-25%',
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: '#7c3aed',
-    opacity: 0.06,
+  loginContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollContainer: {
     padding: 24,
     justifyContent: 'center',
     minHeight: '100%',
-  },
-  loadingScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#020617',
-  },
-  loadingScreenText: {
-    color: '#94a3b8',
-    marginTop: 15,
-    fontSize: 14,
   },
   brandContainer: {
     alignItems: 'center',
@@ -533,45 +1010,45 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 18,
-    backgroundColor: '#4f46e5',
+    backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4f46e5',
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 8,
   },
   logoText: {
     fontSize: 28,
   },
   brandTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#0f172a',
     marginTop: 16,
   },
   brandSubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#64748b',
     marginTop: 4,
   },
   card: {
-    backgroundColor: 'rgba(30, 41, 59, 0.45)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e2e8f0',
     borderRadius: 28,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 4,
   },
   cardHeader: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -579,32 +1056,32 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputLabel: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#cbd5e1',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#fff',
+    color: '#0f172a',
     fontSize: 14,
   },
   button: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#3b82f6',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#6366f1',
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
     color: '#fff',
@@ -614,13 +1091,13 @@ const styles = StyleSheet.create({
   quickSection: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: '#e2e8f0',
     paddingTop: 20,
   },
   quickHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: '#94a3b8',
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -633,118 +1110,649 @@ const styles = StyleSheet.create({
   },
   quickBtn: {
     width: '48%',
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#e2e8f0',
     borderRadius: 12,
     padding: 10,
     marginBottom: 8,
   },
   quickRoleText: {
-    color: '#a5b4fc',
+    color: '#3b82f6',
     fontSize: 11,
     fontWeight: 'bold',
     marginBottom: 2,
   },
   quickEmailText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 10,
   },
-  dashboardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: '#94a3b8',
-  },
-  nameText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 2,
-  },
-  logoutBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  logoutBtnText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dashboardBody: {
-    padding: 24,
+
+  // Dashboard Styles (Matching Screenshot)
+  dashboardContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
   },
-  profileCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  profileHeader: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#818cf8',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-  },
-  profileRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  profileLabel: {
-    color: '#94a3b8',
-    fontSize: 13,
-  },
-  profileValue: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  scanActionBtn: {
-    backgroundColor: '#312e81',
-    borderWidth: 1,
-    borderColor: '#4f46e5',
-    borderRadius: 24,
-    paddingVertical: 32,
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0f172a',
+  },
+  headerChatBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3b82f6',
     justifyContent: 'center',
-    shadowColor: '#4f46e5',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 12,
+    alignItems: 'center',
+  },
+  headerChatEmoji: {
+    fontSize: 20,
+    color: '#fff',
+  },
+  dashboardScroll: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+  birthdayAlert: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fffdf5',
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 20,
   },
-  scanActionEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
+  birthdayContent: {
+    flex: 1,
   },
-  scanActionTitle: {
+  birthdayTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#d97706',
+  },
+  birthdaySubtitle: {
+    fontSize: 12,
+    color: '#b45309',
+    marginTop: 2,
+  },
+  dismissAlertBtn: {
+    padding: 4,
+  },
+  dismissAlertText: {
+    fontSize: 14,
+    color: '#d97706',
+    fontWeight: 'bold',
+  },
+
+  // Premium KS Resident Card (Dark with Gold details)
+  premiumCard: {
+    backgroundColor: '#0a0a0a',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#262626',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    marginBottom: 20,
+  },
+  premiumCardBody: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  goldLogoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2.5,
+    borderColor: '#e5c158',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  goldLogoLetters: {
+    color: '#e5c158',
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: -1,
+  },
+  premiumBrandName: {
+    color: '#e5c158',
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
-  },
-  scanActionDesc: {
-    fontSize: 12,
-    color: '#818cf8',
+    letterSpacing: 3,
     marginTop: 4,
   },
+  premiumCardFooter: {
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f5f5f5',
+  },
+  footerBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  miniLogoBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#fafafb',
+    borderWidth: 1,
+    borderColor: '#e5c158',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniLogoText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#e5c158',
+  },
+  cardDetailsColumn: {
+    marginLeft: 10,
+  },
+  footerBrandTitle: {
+    color: '#171717',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  footerBrandSubtitle: {
+    color: '#737373',
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  myCardBtn: {
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 18,
+  },
+  myCardBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Menu Panel (White Card)
+  menuPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
+  },
+  menuRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIconBg: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuEmojiText: {
+    fontSize: 20,
+  },
+  menuRowText: {
+    marginLeft: 14,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  menuRowRight: {
+    backgroundColor: '#f1f5f9',
+    width: 32,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Custom rotated chevrons
+  chevronContainer: {
+    width: 6,
+    height: 6,
+    borderTopWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderColor: '#3b82f6',
+    transform: [{ rotate: '45deg' }],
+  },
+  chevronLeftContainer: {
+    width: 8,
+    height: 8,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    borderColor: '#3b82f6',
+    transform: [{ rotate: '45deg' }],
+  },
+
+  // Other components
+  sectionHeaderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  quickScanPanelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    padding: 16,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quickScanEmoji: {
+    fontSize: 28,
+    marginRight: 16,
+  },
+  quickScanTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  quickScanSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+
+  // Bottom Tab Bar
+  tabBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 72,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIcon: {
+    fontSize: 20,
+    color: '#94a3b8',
+  },
+  tabText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  tabBadgeContainer: {
+    position: 'relative',
+  },
+  tabRedDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#ef4444',
+  },
+
+  // Back Button
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  backBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3b82f6',
+  },
+
+  // History Lists
+  centerLoader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loaderText: {
+    color: '#64748b',
+    fontSize: 13,
+    marginTop: 10,
+  },
+  listContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#94a3b8',
+    fontSize: 14,
+    marginTop: 40,
+  },
+  logCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  logCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
+    paddingBottom: 10,
+    marginBottom: 10,
+  },
+  logCardDate: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  logCardBody: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  logColumn: {
+    width: '48%',
+    marginBottom: 10,
+  },
+  logLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  logValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  logNote: {
+    fontSize: 11,
+    color: '#64748b',
+    fontStyle: 'italic',
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#f8fafc',
+    paddingTop: 6,
+  },
+
+  // Leaves
+  requestLeaveBtn: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    backgroundColor: '#3b82f6',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  requestLeaveBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  leaveCardType: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  leaveCardBody: {
+    paddingTop: 4,
+  },
+  leaveInfoText: {
+    fontSize: 12.5,
+    color: '#1e293b',
+    marginVertical: 3,
+  },
+  leaveReasonText: {
+    fontSize: 12.5,
+    color: '#64748b',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  leaveManagerText: {
+    fontSize: 11.5,
+    color: '#059669',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+
+  // Leave Form inside Modal
+  formModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  formModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  formLabel: {
+    color: '#64748b',
+    fontSize: 11.5,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  formInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#0f172a',
+    fontSize: 13,
+  },
+  pickerSelectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  pickerOption: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 2,
+  },
+  pickerOptionActive: {
+    backgroundColor: '#3b82f6',
+  },
+  pickerOptionText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  pickerOptionTextActive: {
+    color: '#ffffff',
+  },
+  formButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  formBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  formBtnCancel: {
+    backgroundColor: '#f1f5f9',
+  },
+  formBtnCancelText: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  formBtnSubmit: {
+    backgroundColor: '#3b82f6',
+  },
+  formBtnSubmitText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+
+  // QR Code Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  modalTitle: {
+    color: '#0f172a',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: '#3b82f6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  qrContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  qrImage: {
+    width: 176,
+    height: 176,
+  },
+  qrErrorText: {
+    color: '#ef4444',
+    fontSize: 12,
+  },
+  qrUsageHint: {
+    color: '#64748b',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  closeModalBtn: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  closeModalBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+
+  // Scanner Screen
   scannerScreen: {
     flex: 1,
     backgroundColor: '#0f172a',
@@ -853,87 +1861,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   closeScannerBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  myQrBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  myQrBtnText: {
-    color: '#a5b4fc',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 28,
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    color: '#818cf8',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  qrContainer: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  qrImage: {
-    width: 176,
-    height: 176,
-  },
-  qrErrorText: {
-    color: '#ef4444',
-    fontSize: 12,
-  },
-  qrUsageHint: {
-    color: '#94a3b8',
-    fontSize: 11,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  closeModalBtn: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-  },
-  closeModalBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',

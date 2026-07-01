@@ -1,14 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
   Bars3Icon,
   ArrowLeftOnRectangleIcon,
+  SunIcon,
+  MoonIcon,
 } from '@heroicons/react/24/outline';
 
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { locale, setLocale, t, getLocalizedName } = useLanguage();
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'dark';
+  });
+
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    if (newTheme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  };
 
   const handleLanguageToggle = () => {
     setLocale(locale === 'kh' ? 'en' : 'kh');
@@ -33,6 +50,19 @@ const Navbar = ({ toggleSidebar }) => {
 
       {/* Utilities */}
       <div className="flex items-center gap-4">
+        {/* Theme Toggler */}
+        <button
+          onClick={handleThemeToggle}
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 cursor-pointer transition-all outline-none"
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? (
+            <SunIcon className="h-5 w-5 text-amber-400" />
+          ) : (
+            <MoonIcon className="h-5 w-5 text-indigo-400" />
+          )}
+        </button>
+
         {/* Language Toggler */}
         <button
           onClick={handleLanguageToggle}
