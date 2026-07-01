@@ -57,7 +57,7 @@ const Leaves = () => {
     try {
       setLoading(true);
       let query = `?status=${filterStatus}&search=${search}`;
-      
+
       const response = await api.get(`/leaves${query}`);
       setLeaves(response.data);
     } catch (error) {
@@ -223,13 +223,12 @@ const Leaves = () => {
                       <td className="py-4 px-6 max-w-xs truncate text-slate-300">{leave.reason || '-'}</td>
                       <td className="py-4 px-6">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-khmer ring-1 ${
-                            leave.status === 'Approved'
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-khmer ring-1 ${leave.status === 'Approved'
                               ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
                               : leave.status === 'Rejected'
-                              ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
-                              : 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
-                          }`}
+                                ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
+                                : 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
+                            }`}
                         >
                           {leave.status === 'Approved' ? t("approved") : leave.status === 'Rejected' ? t("rejected") : t("pending")}
                         </span>

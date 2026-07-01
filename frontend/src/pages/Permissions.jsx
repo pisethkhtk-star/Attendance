@@ -27,6 +27,7 @@ const Permissions = () => {
     { key: 'kiosk_settings', label: 'Branch Settings (កំណត់ទីតាំងសាខា)' },
     { key: 'leave_types', label: 'Leave Types Configuration (កំណត់ប្រភេទច្បាប់)' },
     { key: 'leave_allowances', label: 'Leave Allowances Configuration (កំណត់ចំនួនច្បាប់បុគ្គលិក)' },
+    { key: 'leave_approvals', label: 'Leave Approvals Management (គ្រប់គ្រងអ្នកអនុម័តច្បាប់)' },
     { key: 'work_hours', label: 'Company Work Hours (កំណត់ម៉ោងការងារក្រុមហ៊ុន)' }
   ];
 

@@ -80,6 +80,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           name: t("allowances"),
           resource: "leave_allowances",
         },
+        {
+          path: "/approval-manage",
+          name: t("approvalManage"),
+          resource: "leave_approvals",
+        },
       ]
     },
     {

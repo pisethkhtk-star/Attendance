@@ -23,6 +23,7 @@ import Permissions from './pages/Permissions';
 import LeaveTypes from './pages/LeaveTypes'; // verified
 import LeaveAllowances from './pages/LeaveAllowances'; // verified
 import WorkHours from './pages/WorkHours'; // verified
+import ApprovalManage from './pages/ApprovalManage';
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -159,6 +160,16 @@ function App() {
                 element={
                   <ProtectedRoute resource="leave_allowances">
                     <LeaveAllowances />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Leave Approval Management (Permission-guarded) */}
+              <Route
+                path="approval-manage"
+                element={
+                  <ProtectedRoute resource="leave_approvals">
+                    <ApprovalManage />
                   </ProtectedRoute>
                 }
               />

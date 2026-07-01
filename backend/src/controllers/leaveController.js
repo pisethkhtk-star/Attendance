@@ -211,6 +211,36 @@ export const updateStatus = async (req, res) => {
       return res.status(404).json({ message: 'Leave request not found' });
     }
 
+    const employee = await prisma.employee.findUnique({
+      where: { staffId: leave.staffId }
+    });
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee associated with leave not found' });
+    }
+
+    // Enforce designated approvers validation (Admins can bypass)
+    if (req.user.role !== 'Admin') {
+      const individualRules = await prisma.leaveApprovalRule.findMany({
+        where: { scope: 'Employee', targetStaffId: leave.staffId }
+      });
+
+      const departmentRules = await prisma.leaveApprovalRule.findMany({
+        where: { scope: 'Department', targetDeptId: employee.departmentId }
+      });
+
+      const allowedApprovers = [
+        ...individualRules.map(r => r.approverId),
+        ...departmentRules.map(r => r.approverId)
+      ];
+
+      if (allowedApprovers.length > 0 && !allowedApprovers.includes(req.user.staffId)) {
+        return res.status(403).json({
+          message: 'អ្នកមិនមានសិទ្ធិអនុម័តច្បាប់របស់បុគ្គលិកនេះទេ! (You are not the designated approver for this employee)'
+        });
+      }
+    }
+
     const updatedLeave = await prisma.leave.update({
       where: { id },
       data: {

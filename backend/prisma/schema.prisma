@@ -231,3 +231,15 @@ model CompanyWorkHour {
 
   @@map("company_work_hours")
 }
+
+model LeaveApprovalRule {
+  id           String      @id @default(uuid()) @db.Uuid
+  approverId   String      @map("approver_id")
+  scope        String      @default("Employee") // "Department" or "Employee"
+  targetDeptId String?     @map("target_dept_id") @db.Uuid
+  targetStaffId String?    @map("target_staff_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@map("leave_approval_rules")
+}
