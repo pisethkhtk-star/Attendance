@@ -51,6 +51,7 @@ const Employees = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Employee');
   const [errorMsg, setErrorMsg] = useState('');
+  const [branches, setBranches] = useState([]);
   const [defaultWorkHours, setDefaultWorkHours] = useState({
     shift1Start: '08:00',
     shift1End: '12:00',
@@ -90,6 +91,13 @@ const Employees = () => {
         }
       } catch (err) {
         console.error('Error fetching default work hours:', err);
+      }
+
+      try {
+        const kioskRes = await api.get('/kiosk-settings');
+        setBranches(kioskRes.data);
+      } catch (err) {
+        console.error('Error fetching kiosk branches:', err);
       }
     } catch (error) {
       console.error('Error loading metadata:', error);
@@ -260,7 +268,7 @@ const Employees = () => {
     setGender('Male');
     const firstDept = departments[0]?.id || '';
     setDepartmentId(firstDept);
-    setBranch('Phnom Penh HQ');
+    setBranch(branches[0]?.name || 'Phnom Penh HQ');
     setJoinDate(new Date().toISOString().split('T')[0]);
     setStatus('Active');
     setShift1Start(defaultWorkHours.shift1Start);
@@ -401,8 +409,9 @@ const Employees = () => {
           className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
         >
           <option value="" className="bg-slate-900">{t("branch")} ({t("all")})</option>
-          <option value="Phnom Penh HQ" className="bg-slate-900">Phnom Penh HQ</option>
-          <option value="Siem Reap Branch" className="bg-slate-900">Siem Reap Branch</option>
+          {branches.map(b => (
+            <option key={b.id} value={b.name} className="bg-slate-900">{b.name}</option>
+          ))}
         </select>
 
         {/* Status Filter */}
@@ -642,16 +651,23 @@ const Employees = () => {
                   </select>
                 </div>
 
-                {/* Branch */}
+                {/* Branch Selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">{t("branch")}</label>
-                  <input
-                    type="text"
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-khmer">{t("branch")} *</label>
+                  <select
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
-                    placeholder="Phnom Penh HQ"
-                    className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                  />
+                    className="block w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
+                  >
+                    {branches.length === 0 && !branch ? (
+                      <option value="">No branch available</option>
+                    ) : (
+                      // Handle fallback for legacy data if the user edits an employee with a branch that was not created in Kiosk Settings
+                      [...branches, ...(branch && !branches.some(b => b.name === branch) ? [{ id: 'legacy', name: branch }] : [])].map(b => (
+                        <option key={b.id} value={b.name} className="bg-slate-900">{b.name}</option>
+                      ))
+                    )}
+                  </select>
                 </div>
 
                 {/* Join Date */}
