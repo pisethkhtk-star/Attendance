@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
-import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { QrCodeIcon, CameraIcon, ClockIcon, MapPinIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { Html5Qrcode } from 'html5-qrcode';
 
+// Helper: display Khmer name if available, otherwise English
+const getLocalizedName = (nameEn, nameKh) => {
+  if (nameKh && nameKh.trim()) return nameKh.trim();
+  return nameEn || '';
+};
+
 const Kiosk = () => {
-  const { user, hasPermission } = useAuth();
-  const { t, getLocalizedName } = useLanguage();
+  const { hasPermission } = useAuth(); // destructure hasPermission for permission-guarded UI
   const [activeTab, setActiveTab] = useState('face'); // face, qrcode
 
   // Real-time Clock State
@@ -17,12 +21,14 @@ const Kiosk = () => {
 
   // Scanning State
   const [scanLock, setScanLock] = useState(false);
+  const scanLockRef = useRef(false); // ref mirror to avoid stale closure in setInterval
   const [scanError, setScanError] = useState('');
   const [faceStatus, setFaceStatus] = useState('idle'); // idle, loading_models, scanning, error
   const [successResult, setSuccessResult] = useState(null);
 
   // Geolocation State
   const [coords, setCoords] = useState(null);
+  const coordsRef = useRef(null); // ref mirror so interval always reads latest coords
   const [locationError, setLocationError] = useState('');
 
   // References for Media and HTML5 QR
@@ -31,15 +37,27 @@ const Kiosk = () => {
   const faceIntervalRef = useRef(null);
   const qrScannerRef = useRef(null);
 
+  // Keep coordsRef in sync with state so setInterval closures always read latest coords
+  useEffect(() => {
+    coordsRef.current = coords;
+  }, [coords]);
+
+  // Keep scanLockRef in sync with state so setInterval closures always read latest lock
+  useEffect(() => {
+    scanLockRef.current = scanLock;
+  }, [scanLock]);
+
   // Geolocation tracker with fallback for low accuracy (crucial for desktops without GPS cards)
   const requestLocation = (highAccuracy = true) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCoords({
+          const c = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
-          });
+          };
+          setCoords(c);
+          coordsRef.current = c;
           setLocationError('');
         },
         (error) => {
@@ -77,10 +95,12 @@ const Kiosk = () => {
       if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(
           (position) => {
-            setCoords({
+            const c = {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude
-            });
+            };
+            setCoords(c);
+            coordsRef.current = c;
             setLocationError('');
           },
           (error) => {
@@ -189,8 +209,10 @@ const Kiosk = () => {
 
   // Process Face Recognition embedding check
   const handleFaceCheckIn = async (descriptorArray) => {
-    if (scanLock) return;
-    if (!coords) {
+    // Use ref to avoid stale closure
+    if (scanLockRef.current) return;
+    const currentCoords = coordsRef.current;
+    if (!currentCoords) {
       playSound('error');
       setScanError('កំពុងស្វែងរកទីតាំង GPS... សូមរង់ចាំមួយភ្លែត ឬបើក Location Access លើ browser (Acquiring location...)');
       requestLocation(true);
@@ -199,8 +221,8 @@ const Kiosk = () => {
     try {
       const response = await api.post('/face/checkin', {
         faceDescriptor: descriptorArray,
-        latitude: coords.latitude,
-        longitude: coords.longitude
+        latitude: currentCoords.latitude,
+        longitude: currentCoords.longitude
       });
       if (response.data.success) {
         triggerSuccessModal(response.data);
@@ -220,8 +242,14 @@ const Kiosk = () => {
       setFaceStatus('loading_models');
       setScanError('');
 
+      // Wait up to 10s for CDN script to finish loading (defer attribute causes timing issues)
+      let waited = 0;
+      while (!window.faceapi && waited < 10000) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        waited += 200;
+      }
       if (!window.faceapi) {
-        throw new Error('Face recognition library loading. Please wait.');
+        throw new Error('Face recognition library (face-api.js) failed to load. Check internet connection.');
       }
 
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
@@ -243,9 +271,9 @@ const Kiosk = () => {
       }
       faceStreamRef.current = stream;
 
-      // Scan every 1.5 seconds
+      // Scan every 1.5 seconds — use refs to avoid stale closure
       faceIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || scanLock) return;
+        if (!videoRef.current || scanLockRef.current) return;
         try {
           const detection = await window.faceapi.detectSingleFace(
             videoRef.current,

@@ -32,7 +32,7 @@ const Dashboard = () => {
   const [todayLogs, setTodayLogs] = useState([]);
   const [personalTodayLog, setPersonalTodayLog] = useState(null);
   
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   // Update live clock
   useEffect(() => {

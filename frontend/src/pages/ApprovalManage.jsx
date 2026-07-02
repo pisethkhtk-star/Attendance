@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
-import { PlusIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const ApprovalManage = () => {
   const { t, getLocalizedName } = useLanguage();

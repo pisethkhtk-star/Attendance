@@ -163,7 +163,7 @@ const KioskSettings = () => {
         }
         setGpsLoading(false);
       },
-      (err) => {
+      (_err) => {
         setGpsError('Could not access your GPS. Please allow location access.');
         setGpsLoading(false);
       },

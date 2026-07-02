@@ -228,12 +228,12 @@ export const verifyAndCheckInFace = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Recognized Sok! Scanned: ${result.action}`,
+      message: `Recognized! Scanned: ${result.action}`,
       employee: {
-        staffId: result.attendance.employee.staffId,
+        staffId: bestMatch.staffId,
         nameEn: result.attendance.employee.nameEn,
         nameKh: result.attendance.employee.nameKh,
-        department: result.attendance.employee.department.nameEn
+        department: result.attendance.employee.department?.nameEn || result.attendance.employee.department?.nameKh || 'N/A'
       },
       action: result.action,
       timeString: result.timeString

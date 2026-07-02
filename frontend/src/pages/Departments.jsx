@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const Departments = () => {
-  const { t, getLocalizedName } = useLanguage();
+  const { t } = useLanguage();
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

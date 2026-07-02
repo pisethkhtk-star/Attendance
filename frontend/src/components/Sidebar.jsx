@@ -4,16 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
   HomeIcon,
-  BuildingOfficeIcon,
-  BriefcaseIcon,
-  UsersIcon,
   ClockIcon,
   CalendarIcon,
   DocumentChartBarIcon,
   ComputerDesktopIcon,
   ShieldCheckIcon,
   MapPinIcon,
-  ClipboardDocumentCheckIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 

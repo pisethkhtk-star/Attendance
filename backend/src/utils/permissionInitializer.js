@@ -19,6 +19,7 @@ export const initializePermissions = async () => {
       { role: 'Admin', resource: 'kiosk_settings', canAccess: true },
       { role: 'Admin', resource: 'leave_types', canAccess: true },
       { role: 'Admin', resource: 'leave_allowances', canAccess: true },
+      { role: 'Admin', resource: 'leave_approvals', canAccess: true },
       { role: 'Admin', resource: 'permissions', canAccess: true },
       { role: 'Admin', resource: 'work_hours', canAccess: true },
 
@@ -36,6 +37,7 @@ export const initializePermissions = async () => {
       { role: 'HR', resource: 'kiosk_settings', canAccess: false },
       { role: 'HR', resource: 'leave_types', canAccess: true },
       { role: 'HR', resource: 'leave_allowances', canAccess: true },
+      { role: 'HR', resource: 'leave_approvals', canAccess: true },
       { role: 'HR', resource: 'permissions', canAccess: false },
       { role: 'HR', resource: 'work_hours', canAccess: true },
 
@@ -53,6 +55,7 @@ export const initializePermissions = async () => {
       { role: 'Manager', resource: 'kiosk_settings', canAccess: false },
       { role: 'Manager', resource: 'leave_types', canAccess: false },
       { role: 'Manager', resource: 'leave_allowances', canAccess: false },
+      { role: 'Manager', resource: 'leave_approvals', canAccess: false },
       { role: 'Manager', resource: 'permissions', canAccess: false },
       { role: 'Manager', resource: 'work_hours', canAccess: false },
 
@@ -70,6 +73,7 @@ export const initializePermissions = async () => {
       { role: 'Employee', resource: 'kiosk_settings', canAccess: false },
       { role: 'Employee', resource: 'leave_types', canAccess: false },
       { role: 'Employee', resource: 'leave_allowances', canAccess: false },
+      { role: 'Employee', resource: 'leave_approvals', canAccess: false },
       { role: 'Employee', resource: 'permissions', canAccess: false },
       { role: 'Employee', resource: 'work_hours', canAccess: false },
     ];

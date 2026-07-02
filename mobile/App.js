@@ -28,7 +28,7 @@ export default function App() {
   // Login credentials
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrl] = useState('http://10.145.48.140:5050/api');
+  const [apiUrl, setApiUrl] = useState('http://192.168.88.170:5050/api');
 
   // Scanner states
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -78,16 +78,16 @@ export default function App() {
     if (!timeStr) return '-';
     const parts = timeStr.split(':');
     if (parts.length < 2) return timeStr;
-    
+
     let hours = parseInt(parts[0], 10);
     const minutes = parts[1];
-    
+
     if (isNaN(hours)) return timeStr;
-    
+
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
     hours = hours ? hours : 12;
-    
+
     const formattedHours = String(hours).padStart(2, '0');
     return `${formattedHours}:${minutes} ${ampm}`;
   };
@@ -304,8 +304,8 @@ export default function App() {
 
       const { latitude, longitude } = locationRes.coords;
 
-      const endpoint = data.startsWith('branch_qr:') 
-        ? `${apiUrl}/qrcode/scan-branch` 
+      const endpoint = data.startsWith('branch_qr:')
+        ? `${apiUrl}/qrcode/scan-branch`
         : `${apiUrl}/qrcode/scan`;
 
       const response = await axios.post(
@@ -512,7 +512,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.dashboardContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-        
+
         {/* Header matching image exactly */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>CheckinMe</Text>
@@ -544,7 +544,7 @@ export default function App() {
               </View>
               <Text style={styles.premiumBrandName}>KS RESIDENT</Text>
             </View>
-            
+
             {/* Card Footer inside */}
             <View style={styles.premiumCardFooter}>
               <View style={styles.footerBrandRow}>
@@ -696,7 +696,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.dashboardContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-        
+
         {/* Screen Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setCurrentScreen('dashboard')} style={styles.backBtn}>
@@ -725,7 +725,7 @@ export default function App() {
               <View style={styles.logCard}>
                 <View style={styles.logCardHeader}>
                   <Text style={styles.logCardDate}>📅 {formatDateString(item.attendanceDate)}</Text>
-                  
+
                   {/* Status Badges */}
                   <View style={{ flexDirection: 'row' }}>
                     {item.isLate && (
@@ -781,7 +781,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.dashboardContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-        
+
         {/* Screen Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setCurrentScreen('dashboard')} style={styles.backBtn}>
@@ -815,19 +815,19 @@ export default function App() {
               <View style={styles.logCard}>
                 <View style={styles.logCardHeader}>
                   <Text style={styles.leaveCardType}>📝 {item.leaveType}</Text>
-                  
+
                   {/* Status Pills */}
                   <View style={[
-                    styles.badge, 
+                    styles.badge,
                     item.status === 'Approved' ? { backgroundColor: '#d1fae5' } :
-                    item.status === 'Rejected' ? { backgroundColor: '#fee2e2' } :
-                    { backgroundColor: '#e0f2fe' }
+                      item.status === 'Rejected' ? { backgroundColor: '#fee2e2' } :
+                        { backgroundColor: '#e0f2fe' }
                   ]}>
                     <Text style={[
                       styles.badgeText,
                       item.status === 'Approved' ? { color: '#059669' } :
-                      item.status === 'Rejected' ? { color: '#dc2626' } :
-                      { color: '#0284c7' }
+                        item.status === 'Rejected' ? { color: '#dc2626' } :
+                          { color: '#0284c7' }
                     ]}>{item.status}</Text>
                   </View>
                 </View>

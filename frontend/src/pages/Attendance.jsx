@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { MagnifyingGlassIcon, CalendarIcon, PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export const formatTime12Hour = (timeStr) => {
   if (!timeStr) return '-';
@@ -63,7 +63,7 @@ const Attendance = () => {
     return new Date().toISOString().split('T')[0];
   });
   const [filterDept, setFilterDept] = useState('');
-  const [filterBranch, setFilterBranch] = useState('');
+  const [filterBranch, _setFilterBranch] = useState('');
 
   const fetchLogs = async () => {
     try {

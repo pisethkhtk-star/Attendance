@@ -189,8 +189,8 @@ html.light .bg-purple-600,
 html.light .text-indigo-300,
 html.light .text-rose-300,
 html.light .text-emerald-300,
-html.light .bg-slate-950/40 .text-slate-300,
-html.light .bg-slate-950/40 strong {
+html.light .bg-slate-950\/40 .text-slate-300,
+html.light .bg-slate-950\/40 strong {
   color: inherit;
 }
 
@@ -222,7 +222,7 @@ html.light .bg-slate-950\/60 {
 html.light .bg-slate-950\/40 {
   background-color: rgba(15, 23, 42, 0.03) !important;
 }
-html.light .bg-slate-950/80 {
+html.light .bg-slate-950\/80 {
   background-color: rgba(241, 245, 249, 0.9) !important;
 }
 html.light .bg-slate-950 {

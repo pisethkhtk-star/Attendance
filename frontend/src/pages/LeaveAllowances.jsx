@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
-import { ClipboardDocumentCheckIcon, PencilSquareIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentCheckIcon, PencilSquareIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const LeaveAllowances = () => {
-  const { t, getLocalizedName } = useLanguage();
+  const { getLocalizedName } = useLanguage();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

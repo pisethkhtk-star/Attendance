@@ -4,7 +4,6 @@ import { useLanguage } from '../context/LanguageContext';
 import {
   DocumentArrowDownIcon,
   PrinterIcon,
-  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { formatTime12Hour } from './Attendance';
 

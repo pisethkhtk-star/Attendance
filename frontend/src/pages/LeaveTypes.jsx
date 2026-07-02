@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { useLanguage } from '../context/LanguageContext';
-import { Cog6ToothIcon, PlusIcon, PencilSquareIcon, TrashIcon, CheckCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+import { Cog6ToothIcon, PlusIcon, PencilSquareIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const LeaveTypes = () => {
-  const { t, getLocalizedName } = useLanguage();
+
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
