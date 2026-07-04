@@ -12,7 +12,7 @@ const getLocalizedName = (nameEn, nameKh) => {
 };
 
 const Kiosk = () => {
-  const { hasPermission } = useAuth(); // destructure hasPermission for permission-guarded UI
+  const { user, hasPermission } = useAuth(); // destructure user and hasPermission for permission-guarded UI
   const [activeTab, setActiveTab] = useState('face'); // face, qrcode
 
   // Real-time Clock State
@@ -69,8 +69,14 @@ const Kiosk = () => {
     setVerifying(true);
     setVerifyError('');
     try {
-      const empRes = await api.get(`/employees?search=${staffId}`);
-      const matched = empRes.data.find(emp => emp.staffId.toLowerCase() === staffId.toLowerCase());
+      let matched = null;
+      if (user && user.staffId && user.staffId.toLowerCase() === staffId.toLowerCase()) {
+        matched = user;
+      } else {
+        const empRes = await api.get(`/employees?search=${staffId}`);
+        matched = empRes.data.find(emp => emp.staffId.toLowerCase() === staffId.toLowerCase());
+      }
+
       if (!matched) {
         alert('រកមិនឃើញព័ត៌មានគណនីបុគ្គលិកឡើយ! (Employee account details not found)');
         setVerifying(false);
