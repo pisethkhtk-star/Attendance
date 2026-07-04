@@ -110,19 +110,60 @@ const Kiosk = () => {
         return logDateStr === todayDateStr;
       });
 
+      const timeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const now = new Date();
+      const timeOptions = { timeZone: 'Asia/Phnom_Penh', hour: '2-digit', minute: '2-digit', hour12: false };
+      const currentTimeStr = now.toLocaleTimeString('en-US', timeOptions);
+
+      const currentMinutes = timeToMinutes(currentTimeStr);
+      const s1StartMinutes = timeToMinutes(matched.shift1Start);
+      const s1EndMinutes = timeToMinutes(matched.shift1End);
+      const s2StartMinutes = timeToMinutes(matched.shift2Start);
+      const s2EndMinutes = timeToMinutes(matched.shift2End);
+
+      const checkin1 = todayRec?.checkin1;
+      const checkout1 = todayRec?.checkout1;
+      const checkin2 = todayRec?.checkin2;
+      const checkout2 = todayRec?.checkout2;
+
+      // Define checkout 1 start threshold (e.g. 30 minutes before shift ends)
+      const checkout1Start = s1EndMinutes - 30;
+
       let determinedAction = 'checkin_1';
-      if (todayRec) {
-        if (!todayRec.checkin1) {
-          determinedAction = 'checkin_1';
-        } else if (!todayRec.checkout1) {
-          determinedAction = 'checkout_1';
-        } else if (!todayRec.checkin2) {
+
+      if (checkin2 && !checkout2) {
+        determinedAction = 'checkout_2';
+      } else if (checkout1 || (currentMinutes >= checkout1Start && !checkin1)) {
+        if (!checkin2) {
           determinedAction = 'checkin_2';
-        } else if (!todayRec.checkout2) {
-          determinedAction = 'checkout_2';
         } else {
           determinedAction = 'completed';
         }
+      } else if (checkin1 && !checkout1) {
+        const midpoint = s1EndMinutes + (s2StartMinutes - s1EndMinutes) / 2;
+        if (currentMinutes < midpoint) {
+          determinedAction = 'checkout_1';
+        } else {
+          if (!checkin2) {
+            determinedAction = 'checkin_2';
+          } else {
+            determinedAction = 'completed';
+          }
+        }
+      } else if (!checkin1 && currentMinutes < checkout1Start) {
+        determinedAction = 'checkin_1';
+      } else {
+        // Fallback sequential checks
+        if (!checkin1) determinedAction = 'checkin_1';
+        else if (!checkout1) determinedAction = 'checkout_1';
+        else if (!checkin2) determinedAction = 'checkin_2';
+        else if (!checkout2) determinedAction = 'checkout_2';
+        else determinedAction = 'completed';
       }
 
       if (determinedAction === 'completed') {
@@ -133,9 +174,6 @@ const Kiosk = () => {
 
       setNextAction(determinedAction);
 
-      const now = new Date();
-      const timeOptions = { timeZone: 'Asia/Phnom_Penh', hour: '2-digit', minute: '2-digit', hour12: false };
-      const currentTimeStr = now.toLocaleTimeString('en-US', timeOptions);
 
       const compareTime = (t1, t2) => {
         if (!t1 || !t2) return 0;

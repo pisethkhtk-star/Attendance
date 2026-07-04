@@ -44,51 +44,50 @@ export const determineAutoAction = (employee, existingAttendance, timeString) =>
   const s1EndMinutes = timeToMinutes(employee.shift1End);
   const s2StartMinutes = timeToMinutes(employee.shift2Start);
   
-  // Calculate midpoint between shift 1 end and shift 2 start (defaults to 12:30 if shifts are 12:00 and 13:00)
-  const midpointMinutes = s1EndMinutes + (s2StartMinutes - s1EndMinutes) / 2;
+  const checkin1 = existingAttendance?.checkin1;
+  const checkout1 = existingAttendance?.checkout1;
+  const checkin2 = existingAttendance?.checkin2;
+  const checkout2 = existingAttendance?.checkout2;
 
-  if (!existingAttendance) {
-    // First scan of the day
-    if (currentMinutes < midpointMinutes) {
-      return 'checkin_1';
-    } else {
+  // Define checkout 1 start threshold (e.g. 30 minutes before shift ends)
+  const checkout1Start = s1EndMinutes - 30;
+
+  // 1. If we already checked in 2 but haven't checked out 2
+  if (checkin2 && !checkout2) {
+    return 'checkout_2';
+  }
+
+  // 2. If we are in the Shift 2 window or have already finished Shift 1
+  const isPastShift1Checkin = currentMinutes >= checkout1Start;
+  if (checkout1 || (isPastShift1Checkin && !checkin1)) {
+    if (!checkin2) {
       return 'checkin_2';
     }
   }
 
-  const { checkin1, checkout1, checkin2, checkout2 } = existingAttendance;
-
-  if (currentMinutes < midpointMinutes) {
-    // We are in the morning window
-    if (!checkin1) {
-      return 'checkin_1';
-    }
-    if (!checkout1) {
+  // 3. If we checked in 1 but haven't checked out 1
+  if (checkin1 && !checkout1) {
+    const midpoint = s1EndMinutes + (s2StartMinutes - s1EndMinutes) / 2;
+    if (currentMinutes < midpoint) {
       return 'checkout_1';
-    }
-    // Fall forward to afternoon shift if morning is already complete
-    if (!checkin2) {
-      return 'checkin_2';
-    }
-    return 'checkout_2';
-  } else {
-    // We are in the afternoon window
-    if (!checkin2) {
-      // If they skipped checkin1/checkout1 completely, let's see if we should map to checkin1
-      if (!checkin1) {
-        return 'checkin_1';
+    } else {
+      if (!checkin2) {
+        return 'checkin_2';
       }
-      return 'checkin_2';
-    }
-    if (!checkout2) {
       return 'checkout_2';
     }
-    // Fall back or absolute end fallback
-    if (!checkout1) {
-      return 'checkout_1';
-    }
-    return 'checkout_2';
   }
+
+  // 4. If we haven't checked in 1 and we are before checkout 1 start
+  if (!checkin1 && currentMinutes < checkout1Start) {
+    return 'checkin_1';
+  }
+
+  // Fallbacks
+  if (!checkin1) return 'checkin_1';
+  if (!checkout1) return 'checkout_1';
+  if (!checkin2) return 'checkin_2';
+  return 'checkout_2';
 };
 
 // Perform core attendance processing
