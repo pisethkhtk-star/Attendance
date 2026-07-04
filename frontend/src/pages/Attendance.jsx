@@ -8,18 +8,118 @@ export const formatTime12Hour = (timeStr) => {
   if (!timeStr) return '-';
   const parts = timeStr.split(':');
   if (parts.length < 2) return timeStr;
-  
+
   let hours = parseInt(parts[0], 10);
   const minutes = parts[1];
-  
+
   if (isNaN(hours)) return timeStr;
-  
+
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12;
-  
+
   const formattedHours = String(hours).padStart(2, '0');
   return `${formattedHours}:${minutes} ${ampm}`;
+};
+
+const TimePicker12Hour = ({ label, value, onChange }) => {
+  const parseTimeTo12Hour = (time24) => {
+    if (!time24) return { hour: '', minute: '', ampm: 'AM' };
+    const parts = time24.split(':');
+    if (parts.length < 2) return { hour: '', minute: '', ampm: 'AM' };
+
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+
+    if (isNaN(hours)) return { hour: '', minute: '', ampm: 'AM' };
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    return {
+      hour: String(hours).padStart(2, '0'),
+      minute: minutes,
+      ampm
+    };
+  };
+
+  const formatTimeTo24Hour = (hour, minute, ampm) => {
+    if (!hour || !minute) return '';
+    let h = parseInt(hour, 10);
+    if (isNaN(h)) return '';
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+  };
+
+  const { hour, minute, ampm } = parseTimeTo12Hour(value);
+
+  const handleHourChange = (newHour) => {
+    if (!newHour) {
+      onChange('');
+    } else {
+      onChange(formatTimeTo24Hour(newHour, minute || '00', ampm));
+    }
+  };
+
+  const handleMinuteChange = (newMinute) => {
+    if (!newMinute) {
+      onChange('');
+    } else {
+      onChange(formatTimeTo24Hour(hour || '12', newMinute, ampm));
+    }
+  };
+
+  const handleAmpmChange = (newAmpm) => {
+    if (!hour && !minute) return;
+    onChange(formatTimeTo24Hour(hour || '12', minute || '00', newAmpm));
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">
+        {label}
+      </label>
+      <div className="flex gap-1.5 items-center bg-slate-950 border border-white/10 rounded-xl p-2.5 justify-between">
+        {/* Hour Select */}
+        <select
+          value={hour}
+          onChange={(e) => handleHourChange(e.target.value)}
+          className="bg-transparent border-none outline-none text-white text-xs font-semibold cursor-pointer w-12 text-center"
+        >
+          <option value="" className="bg-slate-900 text-slate-500">--</option>
+          {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+            <option key={h} value={h} className="bg-slate-900 text-white">{h}</option>
+          ))}
+        </select>
+
+        <span className="text-slate-500 text-xs">:</span>
+
+        {/* Minute Select */}
+        <select
+          value={minute}
+          onChange={(e) => handleMinuteChange(e.target.value)}
+          className="bg-transparent border-none outline-none text-white text-xs font-semibold cursor-pointer w-12 text-center animate-none"
+        >
+          <option value="" className="bg-slate-900 text-slate-500">--</option>
+          {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+            <option key={m} value={m} className="bg-slate-900 text-white">{m}</option>
+          ))}
+        </select>
+
+        {/* AM/PM Select */}
+        <select
+          value={ampm}
+          onChange={(e) => handleAmpmChange(e.target.value)}
+          className="bg-transparent border-none outline-none text-indigo-400 text-xs font-bold cursor-pointer w-12 text-center"
+        >
+          <option value="AM" className="bg-slate-900 text-white">AM</option>
+          <option value="PM" className="bg-slate-900 text-white">PM</option>
+        </select>
+      </div>
+    </div>
+  );
 };
 
 const Attendance = () => {
@@ -30,27 +130,20 @@ const Attendance = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Edit Modal State
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLog, setSelectedLog] = useState(null);
+  // Unified Add/Edit Modal States
+  const [showModal, setShowModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null); // null = Add Mode, object = Edit Mode
+  const [staffId, setStaffId] = useState('');
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [checkin1, setCheckin1] = useState('');
   const [checkout1, setCheckout1] = useState('');
   const [checkin2, setCheckin2] = useState('');
   const [checkout2, setCheckout2] = useState('');
   const [note, setNote] = useState('');
+
+  const [employeesList, setEmployeesList] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  // Add Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [employeesList, setEmployeesList] = useState([]);
-  const [newStaffId, setNewStaffId] = useState('');
-  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [newCheckin1, setNewCheckin1] = useState('');
-  const [newCheckout1, setNewCheckout1] = useState('');
-  const [newCheckin2, setNewCheckin2] = useState('');
-  const [newCheckout2, setNewCheckout2] = useState('');
-  const [newNote, setNewNote] = useState('');
 
   // Filters State
   const [search, setSearch] = useState('');
@@ -113,106 +206,137 @@ const Attendance = () => {
     }
   };
 
+  const parseTimeTo12Hour = (time24) => {
+    if (!time24) return { hour: '', minute: '', ampm: 'AM' };
+    const parts = time24.split(':');
+    if (parts.length < 2) return { hour: '', minute: '', ampm: 'AM' };
+
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+
+    if (isNaN(hours)) return { hour: '', minute: '', ampm: 'AM' };
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    return {
+      hour: String(hours).padStart(2, '0'),
+      minute: minutes,
+      ampm
+    };
+  };
+
+  const formatTimeTo24Hour = (hour, minute, ampm) => {
+    if (!hour || !minute) return '';
+    let h = parseInt(hour, 10);
+    if (isNaN(h)) return '';
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+  };
+
   const handleOpenEditModal = (log) => {
+    setErrorMsg('');
     setSelectedLog(log);
+    setStaffId(log.employee.staffId);
+    setAttendanceDate(new Date(log.attendanceDate).toISOString().split('T')[0]);
     setCheckin1(log.checkin1 || '');
     setCheckout1(log.checkout1 || '');
     setCheckin2(log.checkin2 || '');
     setCheckout2(log.checkout2 || '');
     setNote(log.note || '');
-    setErrorMsg('');
-    setShowEditModal(true);
-  };
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setErrorMsg('');
-    try {
-      const res = await api.put(`/attendances/${selectedLog.id}`, {
-        checkin1,
-        checkout1,
-        checkin2,
-        checkout2,
-        note
-      });
-
-      setLogs(prev => prev.map(item => {
-        if (item.id === selectedLog.id) {
-          return {
-            ...item,
-            ...res.data.data
-          };
-        }
-        return item;
-      }));
-
-      playSound('success');
-      setShowEditModal(false);
-      setSelectedLog(null);
-    } catch (error) {
-      console.error('Error saving attendance log:', error);
-      setErrorMsg(error.response?.data?.message || 'Error updating record');
-      playSound('error');
-    } finally {
-      setSubmitting(false);
-    }
+    setShowModal(true);
   };
 
   const handleOpenAddModal = async () => {
     setErrorMsg('');
-    setNewStaffId('');
-    setNewDate(new Date().toISOString().split('T')[0]);
-    setNewCheckin1('');
-    setNewCheckout1('');
-    setNewCheckin2('');
-    setNewCheckout2('');
-    setNewNote('');
-    setShowAddModal(true);
+    setSelectedLog(null);
+    setStaffId('');
+    setAttendanceDate(new Date().toISOString().split('T')[0]);
+    setCheckin1('');
+    setCheckout1('');
+    setCheckin2('');
+    setCheckout2('');
+    setNote('');
+    setShowModal(true);
 
     try {
       const res = await api.get('/employees');
       setEmployeesList(res.data);
       if (res.data.length > 0) {
-        setNewStaffId(res.data[0].staffId);
+        setStaffId(res.data[0].staffId);
       }
     } catch (err) {
       console.error('Error fetching employees list:', err);
     }
   };
 
-  const handleSaveAdd = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg('');
 
-    if (!newStaffId) {
-      setErrorMsg('Please select or enter an employee (សូមជ្រើសរើសបុគ្គលិក)');
-      setSubmitting(false);
-      return;
-    }
+    if (selectedLog) {
+      // Edit mode
+      try {
+        const res = await api.put(`/attendances/${selectedLog.id}`, {
+          checkin1,
+          checkout1,
+          checkin2,
+          checkout2,
+          note
+        });
 
-    try {
-      const res = await api.post('/attendances', {
-        staffId: newStaffId,
-        attendanceDate: newDate,
-        checkin1: newCheckin1,
-        checkout1: newCheckout1,
-        checkin2: newCheckin2,
-        checkout2: newCheckout2,
-        note: newNote
-      });
+        setLogs(prev => prev.map(item => {
+          if (item.id === selectedLog.id) {
+            return {
+              ...item,
+              ...res.data.data
+            };
+          }
+          return item;
+        }));
 
-      setLogs(prev => [res.data.data, ...prev]);
+        playSound('success');
+        setShowModal(false);
+        setSelectedLog(null);
+      } catch (error) {
+        console.error('Error saving attendance log:', error);
+        setErrorMsg(error.response?.data?.message || 'Error updating record');
+        playSound('error');
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      // Add mode
+      if (!staffId) {
+        setErrorMsg('Please select an employee (សូមជ្រើសរើសបុគ្គលិក)');
+        setSubmitting(false);
+        return;
+      }
+      try {
+        const res = await api.post('/attendances', {
+          staffId,
+          attendanceDate,
+          checkin1,
+          checkout1,
+          checkin2,
+          checkout2,
+          note
+        });
 
-      playSound('success');
-      setShowAddModal(false);
-    } catch (error) {
-      console.error('Error creating attendance log:', error);
-      setErrorMsg(error.response?.data?.message || 'Error creating record');
-      playSound('error');
-    } finally {
-      setSubmitting(false);
+        setLogs(prev => [res.data.data, ...prev]);
+
+        playSound('success');
+        setShowModal(false);
+      } catch (error) {
+        console.error('Error creating attendance log:', error);
+        setErrorMsg(error.response?.data?.message || 'Error creating record');
+        playSound('error');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -315,7 +439,7 @@ const Attendance = () => {
           >
             <span>📥 {t("exportExcel")}</span>
           </button>
-          
+
           {hasPermission('add_attendance') && (
             <button
               onClick={handleOpenAddModal}
@@ -494,71 +618,102 @@ const Attendance = () => {
         )}
       </div>
 
-      {/* Edit Attendance Record Modal */}
-      {showEditModal && selectedLog && (
+      {/* Unified Add/Edit Attendance Record Modal */}
+      {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="glass-card max-w-lg w-full rounded-2xl overflow-hidden shadow-2xl glow-indigo border border-white/10">
             {/* Header */}
             <div className="p-6 border-b border-white/5 bg-slate-950/40">
-              <h3 className="text-lg font-bold text-white font-khmer">កែប្រែទិន្នន័យវត្តមាន (Edit Attendance)</h3>
+              <h3 className="text-lg font-bold text-white font-khmer">
+                {selectedLog ? 'Edit Attendance' : 'Add Attendance'}
+              </h3>
               <p className="text-xs text-slate-400 mt-1">
-                {getLocalizedName(selectedLog.employee.nameEn, selectedLog.employee.nameKh)} (ID: {selectedLog.employee.staffId}) - {new Date(selectedLog.attendanceDate).toLocaleDateString()}
+                {selectedLog
+                  ? ` ${getLocalizedName(selectedLog.employee.nameEn, selectedLog.employee.nameKh)} (ID: ${selectedLog.employee.staffId})`
+                  : ''}
               </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveEdit}>
+            <form onSubmit={handleSave}>
               <div className="p-6 space-y-4">
                 {errorMsg && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300 font-khmer">
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300 font-khmer animate-pulse">
                     {errorMsg}
                   </div>
                 )}
 
+                {selectedLog ? (
+                  // Edit mode fields (Read-only metadata)
+                  <div className="grid grid-cols-2 gap-4 bg-slate-900/40 p-4 rounded-xl border border-white/5 text-xs">
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-khmer">Employee</p>
+                      <p className="text-white font-bold mt-1 font-khmer">
+                        {selectedLog.employee.staffId} - {getLocalizedName(selectedLog.employee.nameEn, selectedLog.employee.nameKh)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-khmer">Date</p>
+                      <p className="text-white font-bold mt-1">
+                        {new Date(selectedLog.attendanceDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // Add mode fields (Select employee & Date)
+                  <>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">{t("employees")}</label>
+                      <select
+                        value={staffId}
+                        onChange={(e) => setStaffId(e.target.value)}
+                        className="w-full py-2.5 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer cursor-pointer"
+                      >
+                        <option value="">Select Employee...</option>
+                        {employeesList.map(emp => (
+                          <option key={emp.id} value={emp.staffId} className="bg-slate-900">
+                            {emp.staffId} - {getLocalizedName(emp.nameEn, emp.nameKh)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">កាលបរិច្ឆេទ (Date)</label>
+                      <input
+                        type="date"
+                        value={attendanceDate}
+                        onChange={(e) => setAttendanceDate(e.target.value)}
+                        className="w-full py-2.5 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer font-khmer"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   {/* Shift 1 */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check In 1</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 08:00:00"
-                      value={checkin1}
-                      onChange={(e) => setCheckin1(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check Out 1</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 12:00:00"
-                      value={checkout1}
-                      onChange={(e) => setCheckout1(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
+                  <TimePicker12Hour
+                    label="Check In 1"
+                    value={checkin1}
+                    onChange={setCheckin1}
+                  />
+                  <TimePicker12Hour
+                    label="Check Out 1"
+                    value={checkout1}
+                    onChange={setCheckout1}
+                  />
 
                   {/* Shift 2 */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check In 2</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 13:00:00"
-                      value={checkin2}
-                      onChange={(e) => setCheckin2(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check Out 2</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 17:00:00"
-                      value={checkout2}
-                      onChange={(e) => setCheckout2(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
+                  <TimePicker12Hour
+                    label="Check In 2"
+                    value={checkin2}
+                    onChange={setCheckin2}
+                  />
+                  <TimePicker12Hour
+                    label="Check Out 2"
+                    value={checkout2}
+                    onChange={setCheckout2}
+                  />
                 </div>
 
                 {/* Description Note */}
@@ -567,7 +722,7 @@ const Attendance = () => {
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Provide a reason for modification..."
+                    placeholder="សរសេរការបញ្ជាក់បន្ថែមនៅទីនេះ..."
                     className="w-full h-20 py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all font-khmer resize-none"
                   />
                 </div>
@@ -577,7 +732,10 @@ const Attendance = () => {
               <div className="p-6 bg-slate-950/40 border-t border-white/5 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedLog(null);
+                  }}
                   className="py-2.5 px-5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all font-khmer cursor-pointer border-none outline-none"
                 >
                   {t("cancel")}
@@ -587,134 +745,7 @@ const Attendance = () => {
                   disabled={submitting}
                   className="py-2.5 px-6 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Saving...' : 'រក្សាទុក (Save Changes)'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Attendance Record Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="glass-card max-w-lg w-full rounded-2xl overflow-hidden shadow-2xl glow-indigo border border-white/10">
-            {/* Header */}
-            <div className="p-6 border-b border-white/5 bg-slate-950/40">
-              <h3 className="text-lg font-bold text-white font-khmer">បន្ថែមទិន្នន័យវត្តមាន (Add Attendance)</h3>
-              <p className="text-xs text-slate-400 mt-1">Manually log a new attendance record for an employee.</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSaveAdd}>
-              <div className="p-6 space-y-4">
-                {errorMsg && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300 font-khmer">
-                    {errorMsg}
-                  </div>
-                )}
-
-                {/* Employee select */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">{t("employees")}</label>
-                  <select
-                    value={newStaffId}
-                    onChange={(e) => setNewStaffId(e.target.value)}
-                    className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer"
-                  >
-                    <option value="">Select Employee...</option>
-                    {employeesList.map(emp => (
-                      <option key={emp.id} value={emp.staffId} className="bg-slate-900">
-                        {emp.staffId} - {getLocalizedName(emp.nameEn, emp.nameKh)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Attendance Date */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Date (ថ្ងៃខែឆ្នាំ)</label>
-                  <input
-                    type="date"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Shift 1 */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check In 1</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 08:00:00"
-                      value={newCheckin1}
-                      onChange={(e) => setNewCheckin1(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check Out 1</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 12:00:00"
-                      value={newCheckout1}
-                      onChange={(e) => setNewCheckout1(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-
-                  {/* Shift 2 */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check In 2</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 13:00:00"
-                      value={newCheckin2}
-                      onChange={(e) => setNewCheckin2(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Check Out 2</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 17:00:00"
-                      value={newCheckout2}
-                      onChange={(e) => setNewCheckout2(e.target.value)}
-                      className="w-full py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Description Note */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">{t("description")}</label>
-                  <textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Provide a description note for manual checkin..."
-                    className="w-full h-20 py-2 px-3 border border-white/10 bg-slate-950/60 text-white rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all font-khmer resize-none"
-                  />
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="p-6 bg-slate-950/40 border-t border-white/5 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="py-2.5 px-5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all font-khmer cursor-pointer border-none outline-none"
-                >
-                  {t("cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="py-2.5 px-6 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Saving...' : 'រក្សាទុក (Save Changes)'}
+                  {submitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

@@ -57,7 +57,7 @@ const Login = () => {
     if (scanLock) return;
     setScanLock(true);
     setQrError('');
-    
+
     // Stop scanner temporary during verification
     await stopQrScanner();
 
@@ -125,11 +125,9 @@ const Login = () => {
               <ClockIcon className="h-7 w-7 text-white animate-pulse" />
             </div>
             <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-white font-khmer">
-              {locale === 'kh' ? 'ប្រព័ន្ធគ្រប់គ្រងវត្តមានបុគ្គលិក' : 'Employee Attendance'}
+              {locale === 'kh' ? 'Attendance Management' : 'Employee Attendance'}
             </h2>
-            <p className="mt-2 text-center text-sm text-slate-400 font-khmer">
-              BBU Final Project - Khmer & English
-            </p>
+
           </div>
 
           {/* Login Mode Tabs */}
@@ -137,24 +135,22 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setLoginMode('password')}
-              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${
-                loginMode === 'password'
-                  ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${loginMode === 'password'
+                ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
-              🔑 {locale === 'kh' ? 'លេខសម្ងាត់' : 'Password'}
+              {locale === 'kh' ? 'Password' : 'Password'}
             </button>
             <button
               type="button"
               onClick={() => setLoginMode('qrcode')}
-              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${
-                loginMode === 'qrcode'
-                  ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex-1 py-3 flex items-center justify-center gap-2 font-semibold text-[11px] transition-all cursor-pointer font-khmer border-none outline-none ${loginMode === 'qrcode'
+                ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
-              📷 {locale === 'kh' ? 'ស្កេន QR Code' : 'QR Scan'}
+              {locale === 'kh' ? 'Scan QR Code' : 'QR Scan'}
             </button>
           </div>
 
@@ -166,7 +162,7 @@ const Login = () => {
                   {errorMsg}
                 </div>
               )}
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 font-khmer">

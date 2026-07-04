@@ -153,10 +153,8 @@ const LeaveAllowances = () => {
             <ClipboardDocumentCheckIcon className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-khmer">ចំនួនថ្ងៃច្បាប់អនុញ្ញាត (Allowances)</h1>
-            <p className="text-xs text-slate-400 mt-0.5 font-khmer">
-              កំណត់ចំនួនថ្ងៃច្បាប់ពិសេសសម្រាប់បុគ្គលិកម្នាក់ៗ និងពិនិត្យចំនួនថ្ងៃដែលបានឈប់តាមប្រភេទច្បាប់។
-            </p>
+            <h1 className="text-xl font-bold text-white font-khmer">Allowances Leave</h1>
+
           </div>
         </div>
       </div>
@@ -179,7 +177,7 @@ const LeaveAllowances = () => {
           <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="ស្វែងរកតាមឈ្មោះ ឬកូដបុគ្គលិក... (Search by name or staff ID)"
+            placeholder="Search by name or staff ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-900/60 border border-white/10 hover:border-white/20 text-white rounded-xl text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all font-khmer"
@@ -192,7 +190,7 @@ const LeaveAllowances = () => {
             onChange={(e) => setSelectedDept(e.target.value)}
             className="w-full py-2.5 px-3.5 bg-slate-900/60 border border-white/10 hover:border-white/20 text-white rounded-xl text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:bg-slate-900 outline-none transition-all font-khmer cursor-pointer"
           >
-            <option value="">-- គ្រប់ដេប៉ាតឺម៉ង់ (All Departments) --</option>
+            <option value="">All Departments</option>
             {departments.map((dept, idx) => (
               <option key={idx} value={dept.nameEn} className="bg-slate-900">
                 {getLocalizedName(dept.nameEn, dept.nameKh)}
@@ -209,10 +207,10 @@ const LeaveAllowances = () => {
             <thead>
               <tr className="bg-slate-950/20">
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer w-52">
-                  បុគ្គលិក (Employee)
+                  Employee
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer w-40">
-                  ផ្នែក/តួនាទី (Dept & Pos)
+                  Department & Position
                 </th>
                 {activeLeaveTypes.map(type => (
                   <th key={type.id} className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer text-center">
@@ -220,7 +218,7 @@ const LeaveAllowances = () => {
                   </th>
                 ))}
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer text-center w-24">
-                  កែប្រែ
+                  Edit
                 </th>
               </tr>
             </thead>

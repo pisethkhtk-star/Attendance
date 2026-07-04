@@ -27,17 +27,17 @@ const Dashboard = () => {
   // Time logging details
   const [liveTime, setLiveTime] = useState('');
   const [liveDate, setLiveDate] = useState('');
-  
+
   // Daily log state
   const [todayLogs, setTodayLogs] = useState([]);
   const [personalTodayLog, setPersonalTodayLog] = useState(null);
-  
+
   const [_loading, setLoading] = useState(true);
 
   // Update live clock
   useEffect(() => {
     const updateTime = () => {
-      const options = { timeZone: 'Asia/Phnom_Penh', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const options = { timeZone: 'Asia/Phnom_Penh', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
       const dateOptions = { timeZone: 'Asia/Phnom_Penh', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
       const now = new Date();
       setLiveTime(now.toLocaleTimeString('en-US', options));
@@ -163,7 +163,7 @@ const Dashboard = () => {
             <div className="flex justify-between items-center pb-4 border-b border-white/10">
               <h3 className="font-bold text-white flex items-center gap-2 font-khmer">
                 <ClockIcon className="h-5 w-5 text-indigo-400" />
-                វត្តមានថ្ងៃនេះ (Today's Attendance Status)
+                today's Attendance Status
               </h3>
             </div>
 
@@ -217,9 +217,9 @@ const Dashboard = () => {
         <div className="glass-card p-6 rounded-2xl flex flex-col justify-between glow-indigo">
           <div>
             <h3 className="font-bold text-white pb-4 border-b border-white/10 font-khmer">
-              សូចនាករថ្ងៃនេះ (Daily Indicators)
+              Daily Indicators
             </h3>
-            
+
             <div className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -227,11 +227,10 @@ const Dashboard = () => {
                   <p className="text-xs text-slate-400 mt-0.5">Calculated by checking system</p>
                 </div>
                 <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                    personalTodayLog?.isLate
-                      ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
-                  }`}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${personalTodayLog?.isLate
+                    ? 'bg-amber-500/10 text-amber-300 ring-amber-500/20'
+                    : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
+                    }`}
                 >
                   {personalTodayLog?.isLate ? t("late") : t("normal")}
                 </span>
@@ -243,11 +242,10 @@ const Dashboard = () => {
                   <p className="text-xs text-slate-400 mt-0.5">Calculated by checkout shifts</p>
                 </div>
                 <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                    personalTodayLog?.isEarlyLeave
-                      ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
-                      : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
-                  }`}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${personalTodayLog?.isEarlyLeave
+                    ? 'bg-rose-500/10 text-rose-300 ring-rose-500/20'
+                    : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/20'
+                    }`}
                 >
                   {personalTodayLog?.isEarlyLeave ? t("earlyLeave") : t("normal")}
                 </span>

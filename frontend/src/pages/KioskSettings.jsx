@@ -41,7 +41,7 @@ const MapClickHandler = ({ onMapClick }) => {
 const KioskSettings = () => {
   const [settingsList, setSettingsList] = useState([]);
   const [selectedId, setSelectedId] = useState(null); // null means "Add Mode"
-  
+
   // Form fields
   const [name, setName] = useState('');
   const [markerPos, setMarkerPos] = useState([11.5564, 104.9282]);
@@ -58,7 +58,7 @@ const KioskSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  
+
   const [currentGps, setCurrentGps] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState('');
@@ -69,7 +69,7 @@ const KioskSettings = () => {
     try {
       const res = await api.get('/kiosk-settings');
       setSettingsList(res.data);
-      
+
       // If we are currently editing a selected one, refresh its state
       if (selectedId) {
         const current = res.data.find(s => s.id === selectedId);
@@ -135,7 +135,7 @@ const KioskSettings = () => {
     setName(s.name);
     setMarkerPos([s.latitude, s.longitude]);
     setRadius(s.radius);
-    
+
     if (mapRef.current) {
       mapRef.current.flyTo([s.latitude, s.longitude], 15, { animate: true, duration: 1 });
     }
@@ -156,7 +156,7 @@ const KioskSettings = () => {
         const lng = pos.coords.longitude;
         setCurrentGps({ lat, lng });
         setMarkerPos([lat, lng]);
-        
+
         // Pan map
         if (mapRef.current) {
           mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
@@ -178,10 +178,10 @@ const KioskSettings = () => {
       alert('Please enter a location name');
       return;
     }
-    
+
     setSaving(true);
     setSaveSuccess(false);
-    
+
     try {
       const payload = {
         name: name.trim(),
@@ -199,7 +199,7 @@ const KioskSettings = () => {
         // Select it after creation
         setSelectedId(res.data.data.id);
       }
-      
+
       setSaveSuccess(true);
       await fetchSettings();
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -217,7 +217,7 @@ const KioskSettings = () => {
     if (!window.confirm('Are you sure you want to delete this geofence zone?')) {
       return;
     }
-    
+
     setDeletingId(id);
     try {
       await api.delete(`/kiosk-settings/${id}`);
@@ -267,7 +267,7 @@ const KioskSettings = () => {
             <MapPinIcon className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-khmer">ការកំណត់សាខា (Branch Settings)</h1>
+            <h1 className="text-xl font-bold text-white font-khmer">Branch Settings</h1>
             <p className="text-xs text-slate-400 mt-0.5 font-khmer">
               គ្រប់គ្រងទីតាំង Geofences និងកម្រិតកាំ (Radius) សម្រាប់គណនាវត្តមានតាមសាខាផ្សេងៗ។
             </p>
@@ -421,12 +421,12 @@ const KioskSettings = () => {
 
         {/* Right Side: Geofence List & Edit Form Panel — 1/3 width */}
         <div className="lg:col-span-1 flex flex-col gap-5">
-          
+
           {/* Geofence List Section */}
           <div className="glass-card rounded-3xl p-5 border border-white/10 flex flex-col max-h-[300px]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white font-khmer">សាខាដែលបានកំណត់ ({settingsList.length})</h3>
-              
+
               {selectedId && (
                 <button
                   onClick={resetForm}
@@ -445,11 +445,10 @@ const KioskSettings = () => {
                   <div
                     key={s.id}
                     onClick={() => selectSetting(s)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex justify-between items-center group ${
-                      isActive
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex justify-between items-center group ${isActive
                         ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-200'
                         : 'bg-slate-900/40 border-white/5 text-slate-300 hover:bg-slate-900/70 hover:border-white/10'
-                    }`}
+                      }`}
                   >
                     <div className="space-y-1">
                       <p className="text-xs font-bold font-khmer leading-tight">{s.name}</p>
@@ -457,7 +456,7 @@ const KioskSettings = () => {
                         Radius: {s.radius}m · ({s.latitude.toFixed(4)}, {s.longitude.toFixed(4)})
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => handleViewBranchQr(s, e)}
@@ -574,11 +573,10 @@ const KioskSettings = () => {
                       key={r}
                       id={`preset-radius-${r}`}
                       onClick={() => setRadius(r)}
-                      className={`py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer outline-none font-khmer ${
-                        radius === r
+                      className={`py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer outline-none font-khmer ${radius === r
                           ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
                           : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-white hover:border-white/20'
-                      }`}
+                        }`}
                     >
                       {r}m
                     </button>
@@ -589,11 +587,10 @@ const KioskSettings = () => {
 
             {/* Distance check if my location is loaded */}
             {distanceFromGps !== null && (
-              <div className={`rounded-2xl p-3 border text-center text-xs ${
-                distanceFromGps <= radius
+              <div className={`rounded-2xl p-3 border text-center text-xs ${distanceFromGps <= radius
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
                   : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
-              }`}>
+                }`}>
                 <span className="font-khmer font-semibold">
                   {distanceFromGps <= radius ? '✅ Your location is within radius' : '❌ Your location is outside radius'}
                 </span>

@@ -22,6 +22,11 @@ export const initializePermissions = async () => {
       { role: 'Admin', resource: 'leave_approvals', canAccess: true },
       { role: 'Admin', resource: 'permissions', canAccess: true },
       { role: 'Admin', resource: 'work_hours', canAccess: true },
+      { role: 'Admin', resource: 'scan_behalf_face', canAccess: true },
+      { role: 'Admin', resource: 'scan_behalf_qr', canAccess: true },
+      { role: 'Admin', resource: 'leave_approvals', canAccess: true },
+      { role: 'Admin', resource: 'edit_leave_approvals', canAccess: true },
+      { role: 'Admin', resource: 'delete_leave_approvals', canAccess: true },
 
       // HR permissions
       { role: 'HR', resource: 'departments', canAccess: true },
@@ -40,6 +45,11 @@ export const initializePermissions = async () => {
       { role: 'HR', resource: 'leave_approvals', canAccess: true },
       { role: 'HR', resource: 'permissions', canAccess: false },
       { role: 'HR', resource: 'work_hours', canAccess: true },
+      { role: 'HR', resource: 'scan_behalf_face', canAccess: true },
+      { role: 'HR', resource: 'scan_behalf_qr', canAccess: true },
+      { role: 'HR', resource: 'leave_approvals', canAccess: true },
+      { role: 'HR', resource: 'edit_leave_approvals', canAccess: true },
+      { role: 'HR', resource: 'delete_leave_approvals', canAccess: true },
 
       // Manager permissions
       { role: 'Manager', resource: 'departments', canAccess: false },
@@ -58,6 +68,11 @@ export const initializePermissions = async () => {
       { role: 'Manager', resource: 'leave_approvals', canAccess: false },
       { role: 'Manager', resource: 'permissions', canAccess: false },
       { role: 'Manager', resource: 'work_hours', canAccess: false },
+      { role: 'Manager', resource: 'scan_behalf_face', canAccess: false },
+      { role: 'Manager', resource: 'scan_behalf_qr', canAccess: false },
+      { role: 'Manager', resource: 'leave_approvals', canAccess: false },
+      { role: 'Manager', resource: 'edit_leave_approvals', canAccess: false },
+      { role: 'Manager', resource: 'delete_leave_approvals', canAccess: false },
 
       // Employee permissions
       { role: 'Employee', resource: 'departments', canAccess: false },
@@ -76,6 +91,11 @@ export const initializePermissions = async () => {
       { role: 'Employee', resource: 'leave_approvals', canAccess: false },
       { role: 'Employee', resource: 'permissions', canAccess: false },
       { role: 'Employee', resource: 'work_hours', canAccess: false },
+      { role: 'Employee', resource: 'scan_behalf_face', canAccess: false },
+      { role: 'Employee', resource: 'scan_behalf_qr', canAccess: false },
+      { role: 'Employee', resource: 'leave_approvals', canAccess: false },
+      { role: 'Employee', resource: 'edit_leave_approvals', canAccess: false },
+      { role: 'Employee', resource: 'delete_leave_approvals', canAccess: false },
     ];
 
     for (const p of defaultPermissions) {

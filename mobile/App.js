@@ -60,6 +60,15 @@ export default function App() {
   const [newLeaveReason, setNewLeaveReason] = useState('');
   const [submittingLeave, setSubmittingLeave] = useState(false);
 
+  // Today's attendance checking states
+  const [todayRecord, setTodayRecord] = useState(null);
+  const [nextAction, setNextAction] = useState('checkin_1'); // 'checkin_1' | 'checkout_1' | 'checkin_2' | 'checkout_2' | 'completed'
+  const [isScanUnlocked, setIsScanUnlocked] = useState(false);
+  const [earlyCheckoutReason, setEarlyCheckoutReason] = useState('');
+  const [showEarlyCheckoutModal, setShowEarlyCheckoutModal] = useState(false);
+  const [isSimulatingFaceScan, setIsSimulatingFaceScan] = useState(false);
+  const [faceScanMessage, setFaceScanMessage] = useState('');
+
   // Custom rotated vector chevron for header/list items
   const ChevronRight = () => (
     <View style={styles.chevronContainer}>
@@ -144,11 +153,77 @@ export default function App() {
     })();
   }, []);
 
+  const fetchTodayStatus = async () => {
+    if (!token || !user) return;
+    try {
+      const res = await axios.get(`${apiUrl}/attendances/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.length > 0) {
+        // Get today's date in Cambodia timezone (Asia/Phnom_Penh)
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Phnom_Penh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+        
+        const parts = formatter.formatToParts(now);
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
+        const year = parts.find(p => p.type === 'year').value;
+        const todayDateStr = `${year}-${month}-${day}`;
+
+        // Find today's record from history logs in a timezone-safe manner
+        const todayRec = res.data.find(item => {
+          if (!item.attendanceDate) return false;
+          const logDate = new Date(item.attendanceDate);
+          const logParts = formatter.formatToParts(logDate);
+          const lMonth = logParts.find(p => p.type === 'month').value;
+          const lDay = logParts.find(p => p.type === 'day').value;
+          const lYear = logParts.find(p => p.type === 'year').value;
+          const logDateStr = `${lYear}-${lMonth}-${lDay}`;
+          return logDateStr === todayDateStr;
+        });
+
+        if (todayRec) {
+          setTodayRecord(todayRec);
+          if (!todayRec.checkin1) {
+            setNextAction('checkin_1');
+          } else if (!todayRec.checkout1) {
+            setNextAction('checkout_1');
+          } else if (!todayRec.checkin2) {
+            setNextAction('checkin_2');
+          } else if (!todayRec.checkout2) {
+            setNextAction('checkout_2');
+          } else {
+            setNextAction('completed');
+          }
+        } else {
+          setTodayRecord(null);
+          setNextAction('checkin_1');
+        }
+      } else {
+        setTodayRecord(null);
+        setNextAction('checkin_1');
+      }
+    } catch (err) {
+      console.error('Error fetching today status:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchTodayStatus();
+    }
+  }, [token]);
+
   // Fetch functions
   const fetchAttendanceHistory = async () => {
     setAttendanceLoading(true);
     try {
-      const res = await axios.get(`${apiUrl}/attendance/history`, {
+      const res = await axios.get(`${apiUrl}/attendances/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data) {
@@ -225,6 +300,107 @@ export default function App() {
     } finally {
       setSubmittingLeave(false);
     }
+  };
+
+  // Time comparison helper (returns t1_mins - t2_mins)
+  const compareTime = (t1, t2) => {
+    if (!t1 || !t2) return 0;
+    const [h1, m1] = t1.split(':').map(Number);
+    const [h2, m2] = t2.split(':').map(Number);
+    return (h1 * 60 + m1) - (h2 * 60 + m2);
+  };
+
+  const handleCheckPress = () => {
+    if (nextAction === 'completed') {
+      Alert.alert('រួចរាល់', 'អ្នកបានបំពេញវត្តមានថ្ងៃនេះរួចរាល់ហើយ!');
+      return;
+    }
+
+    // Get current Cambodia time
+    const now = new Date();
+    const cambodiaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Phnom_Penh" }));
+    const currentHours = String(cambodiaTime.getHours()).padStart(2, '0');
+    const currentMinutes = String(cambodiaTime.getMinutes()).padStart(2, '0');
+    const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+    let isEarly = false;
+
+    if (nextAction === 'checkout_1' && user?.shift1End) {
+      if (compareTime(currentTimeStr, user.shift1End) < 0) {
+        isEarly = true;
+      }
+    } else if (nextAction === 'checkout_2' && user?.shift2End) {
+      if (compareTime(currentTimeStr, user.shift2End) < 0) {
+        isEarly = true;
+      }
+    }
+
+    if (isEarly) {
+      setEarlyCheckoutReason('');
+      setShowEarlyCheckoutModal(true);
+    } else {
+      setIsScanUnlocked(true);
+      Alert.alert(
+        'ផ្ទៀងផ្ទាត់រួចរាល់',
+        'សូមធ្វើការស្កេន QR Code ឬ ស្កេនមុខ ដើម្បីចុះវត្តមាន។',
+        [{ text: 'យល់ព្រម' }]
+      );
+    }
+  };
+
+  const handleSubmitEarlyReason = () => {
+    if (!earlyCheckoutReason.trim()) {
+      Alert.alert('បញ្ចូលព័ត៌មាន', 'សូមបញ្ចូលមូលហេតុនៃការចាកចេញមុនម៉ោងកំណត់។');
+      return;
+    }
+    setShowEarlyCheckoutModal(false);
+    setIsScanUnlocked(true);
+    Alert.alert(
+      'បានរក្សាទុកមូលហេតុ',
+      'សូមធ្វើការស្កេន QR Code ឬ ស្កេនមុខ ដើម្បីចុះវត្តមាន។',
+      [{ text: 'យល់ព្រម' }]
+    );
+  };
+
+  const handleFaceScanSimulate = async () => {
+    setIsSimulatingFaceScan(true);
+    setFaceScanMessage('កំពុងស្វែងរកទម្រង់មុខ... (Detecting face...)');
+
+    // Simulate 2 second scanning
+    setTimeout(async () => {
+      setFaceScanMessage('កំពុងផ្ទៀងផ្ទាត់ទិន្នន័យ... (Verifying face...)');
+      try {
+        const response = await axios.post(
+          `${apiUrl}/attendances/log`,
+          {
+            staffId: user.staffId,
+            action: nextAction,
+            note: earlyCheckoutReason ? `Face Scan: ${earlyCheckoutReason}` : 'Face Scan'
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data && response.data.data) {
+          Alert.alert('ជោគជ័យ', 'ស្កេនទម្រង់មុខជោគជ័យ!');
+          setIsScanUnlocked(false);
+          setEarlyCheckoutReason('');
+          fetchTodayStatus();
+        } else {
+          Alert.alert('បរាជ័យ', 'មិនអាចផ្ទៀងផ្ទាត់ទម្រង់មុខបានឡើយ។');
+        }
+      } catch (err) {
+        console.error('Face scan error:', err);
+        Alert.alert('បរាជ័យ', err.response?.data?.message || 'មានបញ្ហាពេលផ្ញើវត្តមានទៅកាន់ Server។');
+      } finally {
+        setIsSimulatingFaceScan(false);
+        setFaceScanMessage('');
+      }
+    }, 2000);
   };
 
   // Login execution
@@ -316,6 +492,8 @@ export default function App() {
           location: 'Mobile Geofence App',
           latitude,
           longitude,
+          note: earlyCheckoutReason,
+          action: nextAction
         },
         {
           headers: {
@@ -330,6 +508,9 @@ export default function App() {
           success: true,
           message: response.data.message || 'ចុះវត្តមានបានជោគជ័យ!'
         });
+        setIsScanUnlocked(false);
+        setEarlyCheckoutReason('');
+        fetchTodayStatus(); // Refresh dashboard states immediately
       } else {
         setScanResult({
           success: false,
@@ -620,14 +801,164 @@ export default function App() {
           {/* Section Header: Dashboard */}
           <Text style={styles.sectionHeaderTitle}>Dashboard</Text>
 
-          {/* QR scanner launch button */}
-          <TouchableOpacity style={styles.quickScanPanelBtn} onPress={handleOpenScanner}>
-            <Text style={styles.quickScanEmoji}>📷</Text>
-            <View>
-              <Text style={styles.quickScanTitle}>ស្កេន QR Code ចុះវត្តមាន</Text>
-              <Text style={styles.quickScanSubtitle}>Scan to Check-in / Check-out</Text>
+          {/* Work Hours & Attendance Control Panel */}
+          <View style={styles.attendanceControlPanel}>
+            <Text style={styles.panelTitle}>ម៉ោងធ្វើការ និងវត្តមានថ្ងៃនេះ / Shift & Attendance</Text>
+            
+            {/* Shifts table */}
+            <View style={styles.shiftsRow}>
+              <View style={styles.shiftCard}>
+                <Text style={styles.shiftCardTitle}>☀️ វេនព្រឹក / Shift 1</Text>
+                <Text style={styles.shiftCardTime}>ម៉ោងកំណត់៖ {user?.shift1Start || '08:00'} - {user?.shift1End || '12:00'}</Text>
+                <View style={styles.shiftStatusLine}>
+                  <Text style={styles.shiftStatusLabel}>ចូល (In)៖ </Text>
+                  <Text style={[styles.shiftStatusVal, todayRecord?.checkin1 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkin1)}
+                  </Text>
+                </View>
+                <View style={styles.shiftStatusLine}>
+                  <Text style={styles.shiftStatusLabel}>ចេញ (Out)៖ </Text>
+                  <Text style={[styles.shiftStatusVal, todayRecord?.checkout1 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkout1)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.shiftCard}>
+                <Text style={styles.shiftCardTitle}>⛅ វេនល្ងាច / Shift 2</Text>
+                <Text style={styles.shiftCardTime}>ម៉ោងកំណត់៖ {user?.shift2Start || '13:00'} - {user?.shift2End || '17:00'}</Text>
+                <View style={styles.shiftStatusLine}>
+                  <Text style={styles.shiftStatusLabel}>ចូល (In)៖ </Text>
+                  <Text style={[styles.shiftStatusVal, todayRecord?.checkin2 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkin2)}
+                  </Text>
+                </View>
+                <View style={styles.shiftStatusLine}>
+                  <Text style={styles.shiftStatusLabel}>ចេញ (Out)៖ </Text>
+                  <Text style={[styles.shiftStatusVal, todayRecord?.checkout2 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkout2)}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </TouchableOpacity>
+
+            {/* Check Button */}
+            <TouchableOpacity 
+              style={[
+                styles.checkBtn,
+                nextAction === 'completed' ? styles.checkBtnCompleted : styles.checkBtnActive
+              ]} 
+              onPress={handleCheckPress}
+            >
+              <Text style={styles.checkBtnText}>
+                {nextAction === 'checkin_1' && '👉 ចុច Check-In វេនព្រឹក'}
+                {nextAction === 'checkout_1' && '👉 ចុច Check-Out វេនព្រឹក'}
+                {nextAction === 'checkin_2' && '👉 ចុច Check-In វេនល្ងាច'}
+                {nextAction === 'checkout_2' && '👉 ចុច Check-Out វេនល្ងាច'}
+                {nextAction === 'completed' && '🎉 វត្តមានថ្ងៃនេះពេញលេញរួចរាល់'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Unlock Status Message */}
+            {!isScanUnlocked && nextAction !== 'completed' && (
+              <Text style={styles.lockHintText}>🔒 សូមចុចប៊ូតុង Check ខាងលើដើម្បីបើកដំណើរការស្កេន</Text>
+            )}
+            {isScanUnlocked && (
+              <Text style={styles.unlockHintText}>🔓 បានបើកដំណើរការស្កេនវត្តមានហើយ! សូមជ្រើសរើស៖</Text>
+            )}
+
+            {/* Scanner buttons */}
+            <View style={styles.scanButtonsRow}>
+              {/* Face Scan Button */}
+              <TouchableOpacity
+                style={[
+                  styles.scanActionOptionBtn,
+                  isScanUnlocked ? styles.scanOptionEnabled : styles.scanOptionDisabled
+                ]}
+                disabled={!isScanUnlocked}
+                onPress={handleFaceScanSimulate}
+              >
+                <Text style={styles.scanOptionEmoji}>👤</Text>
+                <Text style={styles.scanOptionTitle}>ស្កេនទម្រង់មុខ</Text>
+                <Text style={styles.scanOptionSubtitle}>Face Scan</Text>
+              </TouchableOpacity>
+
+              {/* QR Scan Button */}
+              <TouchableOpacity
+                style={[
+                  styles.scanActionOptionBtn,
+                  isScanUnlocked ? styles.scanOptionEnabled : styles.scanOptionDisabled
+                ]}
+                disabled={!isScanUnlocked}
+                onPress={handleOpenScanner}
+              >
+                <Text style={styles.scanOptionEmoji}>📷</Text>
+                <Text style={styles.scanOptionTitle}>ស្កេន QR Code</Text>
+                <Text style={styles.scanOptionSubtitle}>QR Scanner</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Early Checkout Modal */}
+          <Modal
+            visible={showEarlyCheckoutModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowEarlyCheckoutModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.earlyCheckoutModalContent}>
+                <Text style={styles.earlyCheckoutModalTitle}>⚠️ ចាកចេញមុនម៉ោងកំណត់ (Early Check-out)</Text>
+                <Text style={styles.earlyCheckoutModalDesc}>
+                  ម៉ោងចាកចេញរបស់អ្នកគឺលឿនជាងម៉ោងកំណត់។ សូមបំពេញមូលហេតុនៃការចាកចេញមុនម៉ោងកំណត់៖
+                </Text>
+                
+                <TextInput
+                  style={styles.earlyCheckoutInput}
+                  placeholder="សរសេរមូលហេតុនៅទីនេះ..."
+                  placeholderTextColor="#94a3b8"
+                  value={earlyCheckoutReason}
+                  onChangeText={setEarlyCheckoutReason}
+                  multiline={true}
+                />
+
+                <View style={styles.formButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.formBtn, styles.formBtnCancel]}
+                    onPress={() => setShowEarlyCheckoutModal(false)}
+                  >
+                    <Text style={styles.formBtnCancelText}>បោះបង់</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.formBtn, styles.formBtnSubmit]}
+                    onPress={handleSubmitEarlyReason}
+                  >
+                    <Text style={styles.formBtnSubmitText}>យល់ព្រម (Submit)</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Face Scan Simulator Modal */}
+          <Modal
+            visible={isSimulatingFaceScan}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => {}}
+          >
+            <View style={styles.faceScanOverlay}>
+              <View style={styles.faceScanContainer}>
+                <View style={styles.faceScannerOutline}>
+                  <Text style={styles.faceScanEmoji}>👤</Text>
+                  <ActivityIndicator size="large" color="#3b82f6" style={styles.faceScanSpinner} />
+                </View>
+                <Text style={styles.faceScanTitle}>ស្កេនទម្រង់មុខ (Face Scanner)</Text>
+                <Text style={styles.faceScanSubtitle}>{faceScanMessage}</Text>
+              </View>
+            </View>
+          </Modal>
         </ScrollView>
 
         {/* Bottom Tab Bar matching design image */}
@@ -704,6 +1035,95 @@ export default function App() {
             <Text style={styles.backBtnText}> ត្រឡប់</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>វត្តមាន (Attendance)</Text>
+          <TouchableOpacity onPress={() => setCurrentScreen('attendance_report')} style={styles.headerReportBtn}>
+            <Text style={styles.headerReportBtnText}>Report</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.attendanceTodayContainer}>
+          {/* Current Date Display */}
+          <View style={styles.todayDatePanel}>
+            <Text style={styles.todayDateTextKh}>📅 វត្តមានថ្ងៃនេះ</Text>
+            <Text style={styles.todayDateTextEn}>{formatDateString(new Date().toISOString())}</Text>
+          </View>
+
+          {/* Today's Card */}
+          <View style={styles.todayDetailedCard}>
+            <Text style={styles.cardStatusHeader}>សង្ខេបវត្តមានប្រចាំថ្ងៃ / Today's Summary</Text>
+            
+            {/* Shift 1 Details */}
+            <View style={styles.todayDetailShiftBox}>
+              <Text style={styles.shiftBoxTitle}>☀️ វេនទី ១ (Shift 1)៖ {user?.shift1Start || '08:00'} - {user?.shift1End || '12:00'}</Text>
+              <View style={styles.shiftDetailGrid}>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>Check In 1</Text>
+                  <Text style={[styles.detailValue, todayRecord?.checkin1 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkin1)}
+                  </Text>
+                </View>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>Check Out 1</Text>
+                  <Text style={[styles.detailValue, todayRecord?.checkout1 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkout1)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Shift 2 Details */}
+            <View style={styles.todayDetailShiftBox}>
+              <Text style={styles.shiftBoxTitle}>⛅ វេនទី ២ (Shift 2)៖ {user?.shift2Start || '13:00'} - {user?.shift2End || '17:00'}</Text>
+              <View style={styles.shiftDetailGrid}>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>Check In 2</Text>
+                  <Text style={[styles.detailValue, todayRecord?.checkin2 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkin2)}
+                  </Text>
+                </View>
+                <View style={styles.detailCol}>
+                  <Text style={styles.detailLabel}>Check Out 2</Text>
+                  <Text style={[styles.detailValue, todayRecord?.checkout2 ? styles.statusSuccessText : null]}>
+                    {formatTime12Hour(todayRecord?.checkout2)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Notes if any */}
+            {todayRecord?.note ? (
+              <View style={styles.todayNoteBox}>
+                <Text style={styles.todayNoteLabel}>📝 មូលហេតុ/កំណត់សម្គាល់៖</Text>
+                <Text style={styles.todayNoteVal}>{todayRecord.note}</Text>
+              </View>
+            ) : null}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (currentScreen === 'attendance_report') {
+    // Filter 2 months data (last 60 days)
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+    const reportLogs = attendanceLogs.filter(item => {
+      if (!item.attendanceDate) return false;
+      const recordDate = new Date(item.attendanceDate);
+      return recordDate >= twoMonthsAgo;
+    });
+
+    return (
+      <SafeAreaView style={styles.dashboardContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+
+        {/* Screen Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setCurrentScreen('attendance_history')} style={styles.backBtn}>
+            <ChevronLeft />
+            <Text style={styles.backBtnText}> ត្រឡប់</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>របាយការណ៍ ២ខែ</Text>
           <View style={{ width: 60 }} />
         </View>
 
@@ -714,12 +1134,12 @@ export default function App() {
           </View>
         ) : (
           <FlatList
-            data={attendanceLogs}
+            data={reportLogs}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
             style={{ flex: 1 }}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>មិនមានកំណត់ត្រាវត្តមានឡើយ។</Text>
+              <Text style={styles.emptyText}>មិនមានកំណត់ត្រាវត្តមាន ២ខែចុងក្រោយនេះទេ។</Text>
             }
             renderItem={({ item }) => (
               <View style={styles.logCard}>
@@ -1158,7 +1578,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingTop: 44,
+    paddingBottom: 14,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
@@ -1884,5 +2305,383 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+
+  // Attendance Control styles
+  attendanceControlPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  panelTitle: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  shiftsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  shiftCard: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  shiftCardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  shiftCardTime: {
+    fontSize: 10,
+    color: '#64748b',
+    marginBottom: 10,
+  },
+  shiftStatusLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  shiftStatusLabel: {
+    fontSize: 10,
+    color: '#475569',
+  },
+  shiftStatusVal: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  statusSuccessText: {
+    color: '#10b981',
+    fontWeight: '700',
+  },
+  checkBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  checkBtnActive: {
+    backgroundColor: '#3b82f6',
+  },
+  checkBtnCompleted: {
+    backgroundColor: '#10b981',
+  },
+  checkBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  lockHintText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  unlockHintText: {
+    color: '#3b82f6',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  scanButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  scanActionOptionBtn: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  scanOptionEnabled: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  scanOptionDisabled: {
+    backgroundColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    opacity: 0.6,
+  },
+  scanOptionEmoji: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  scanOptionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  scanOptionSubtitle: {
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  
+  // Early Checkout Modal styles
+  earlyCheckoutModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  earlyCheckoutModalTitle: {
+    color: '#dc2626',
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  earlyCheckoutModalDesc: {
+    color: '#475569',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  earlyCheckoutInput: {
+    height: 90,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    padding: 12,
+    color: '#0f172a',
+    fontSize: 13,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+
+  // Face Scan Simulator Modal styles
+  faceScanOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  faceScanContainer: {
+    alignItems: 'center',
+    padding: 24,
+  },
+  faceScannerOutline: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 3,
+    borderColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    marginBottom: 32,
+  },
+  faceScanSpinner: {
+    position: 'absolute',
+  },
+  faceScanEmoji: {
+    fontSize: 72,
+    color: '#3b82f6',
+    opacity: 0.8,
+  },
+  faceScanTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  faceScanSubtitle: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+
+  // Today Highlight inside Attendance History Screen
+  todayAttendanceHeaderCard: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+  },
+  todayHeaderTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1e40af',
+    marginBottom: 12,
+  },
+  todayGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
+  todayGridCol: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  todayGridLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  todayGridValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  todayNoteText: {
+    marginTop: 10,
+    fontSize: 11,
+    color: '#475569',
+    backgroundColor: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  historySectionTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#334155',
+    marginBottom: 10,
+    marginTop: 4,
+  },
+
+  // Attendance Today Detailed screen styles
+  headerReportBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  headerReportBtnText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1d4ed8',
+  },
+  attendanceTodayContainer: {
+    padding: 20,
+  },
+  todayDatePanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  todayDateTextKh: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#334155',
+    marginBottom: 4,
+  },
+  todayDateTextEn: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  todayDetailedCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  cardStatusHeader: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  todayDetailShiftBox: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  shiftBoxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 12,
+  },
+  shiftDetailGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  detailCol: {
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+  },
+  todayNoteBox: {
+    marginTop: 8,
+    backgroundColor: '#fff1f2',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+  },
+  todayNoteLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#be123c',
+    marginBottom: 4,
+  },
+  todayNoteVal: {
+    fontSize: 11,
+    color: '#9f1239',
   },
 });

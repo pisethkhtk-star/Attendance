@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ShieldCheckIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../context/AuthContext';
 
 const ApprovalManage = () => {
   const { t, getLocalizedName } = useLanguage();
+  const { hasPermission } = useAuth();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // Edit states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editRuleId, setEditRuleId] = useState(null);
+
   // Lookups
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -78,6 +84,8 @@ const ApprovalManage = () => {
   };
 
   const handleOpenAddModal = () => {
+    setIsEditMode(false);
+    setEditRuleId(null);
     const managers = employees.filter(e => ['Admin', 'HR', 'Manager'].includes(e.role));
     setApproverId(managers.length > 0 ? managers[0].staffId : '');
     setScope('Employee');
@@ -89,10 +97,32 @@ const ApprovalManage = () => {
     setShowModal(true);
   };
 
+  const handleOpenEditModal = (rule) => {
+    setIsEditMode(true);
+    setEditRuleId(rule.id);
+    setApproverId(rule.approverId || '');
+    setScope(rule.scope || 'Employee');
+    if (rule.scope === 'Department') {
+      setTargetDeptId(rule.targetDeptId || (departments.length > 0 ? departments[0].id : ''));
+      setTargetStaffIds([]);
+    } else {
+      setTargetStaffIds(rule.targetStaffId ? [rule.targetStaffId] : []);
+      setTargetDeptId(departments.length > 0 ? departments[0].id : '');
+    }
+    setEmpSearch('');
+    setErrorMsg('');
+    setSuccessMsg('');
+    setShowModal(true);
+  };
+
   const toggleEmployeeSelection = (staffId) => {
-    setTargetStaffIds(prev =>
-      prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
-    );
+    if (isEditMode) {
+      setTargetStaffIds([staffId]);
+    } else {
+      setTargetStaffIds(prev =>
+        prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
+      );
+    }
   };
 
   const toggleSelectAll = () => {
@@ -123,21 +153,35 @@ const ApprovalManage = () => {
     try {
       setSaving(true);
       setErrorMsg('');
-      const res = await api.post('/leave-approvals', {
-        approverId,
-        scope,
-        targetDeptId: scope === 'Department' ? targetDeptId : null,
-        targetStaffIds: scope === 'Employee' ? targetStaffIds : null
-      });
+      
+      let res;
+      let msg;
+      
+      if (isEditMode) {
+        res = await api.put(`/leave-approvals/${editRuleId}`, {
+          approverId,
+          scope,
+          targetDeptId: scope === 'Department' ? targetDeptId : null,
+          targetStaffId: scope === 'Employee' ? targetStaffIds[0] : null
+        });
+        msg = res.data?.message || 'Leave approval rule updated successfully!';
+      } else {
+        res = await api.post('/leave-approvals', {
+          approverId,
+          scope,
+          targetDeptId: scope === 'Department' ? targetDeptId : null,
+          targetStaffIds: scope === 'Employee' ? targetStaffIds : null
+        });
+        msg = res.data?.message || 'Leave approval rules created successfully!';
+      }
 
-      const msg = res.data?.message || 'Leave approval rules created successfully!';
       setSuccessMsg(msg);
       playSound('success');
       setShowModal(false);
       fetchData();
     } catch (err) {
-      console.error('Error creating approval rule:', err);
-      setErrorMsg(err.response?.data?.message || 'Error creating approval rule');
+      console.error('Error saving approval rule:', err);
+      setErrorMsg(err.response?.data?.message || 'Error saving approval rule');
       playSound('error');
     } finally {
       setSaving(false);
@@ -163,12 +207,12 @@ const ApprovalManage = () => {
     const approverName = rule.approver ? `${rule.approver.nameEn} ${rule.approver.nameKh}`.toLowerCase() : '';
     const targetName = rule.targetEmployee ? `${rule.targetEmployee.nameEn} ${rule.targetEmployee.nameKh}`.toLowerCase() : '';
     const deptName = rule.targetDept ? `${rule.targetDept.nameEn} ${rule.targetDept.nameKh}`.toLowerCase() : '';
-    
-    return approverName.includes(search.toLowerCase()) || 
-           targetName.includes(search.toLowerCase()) || 
-           deptName.includes(search.toLowerCase()) ||
-           rule.approverId.toLowerCase().includes(search.toLowerCase()) ||
-           (rule.targetStaffId && rule.targetStaffId.toLowerCase().includes(search.toLowerCase()));
+
+    return approverName.includes(search.toLowerCase()) ||
+      targetName.includes(search.toLowerCase()) ||
+      deptName.includes(search.toLowerCase()) ||
+      rule.approverId.toLowerCase().includes(search.toLowerCase()) ||
+      (rule.targetStaffId && rule.targetStaffId.toLowerCase().includes(search.toLowerCase()));
   });
 
   const managers = employees.filter(e => ['Admin', 'HR', 'Manager'].includes(e.role));
@@ -196,18 +240,17 @@ const ApprovalManage = () => {
       {/* Header Block */}
       <div className="glass-card p-6 rounded-2xl glow-indigo flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-white font-khmer">គ្រប់គ្រងការអនុម័តច្បាប់ (Approval Manage)</h2>
-          <p className="text-slate-400 text-xs mt-1">
-            កំណត់ និងគ្រប់គ្រងអ្នកអនុម័តច្បាប់សម្រាករបស់បុគ្គលិកម្នាក់ៗ ឬជាក្រុមសាខា/ដេប៉ាតឺម៉ង់
-          </p>
+          <h2 className="text-xl font-bold text-white font-khmer">Approval Manage</h2>
         </div>
-        <button
-          onClick={handleOpenAddModal}
-          className="py-2.5 px-5 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer flex items-center gap-2"
-        >
-          <PlusIcon className="h-4 w-4" />
-          <span>បន្ថែមច្បាប់អនុម័ត (Add Approver Rule)</span>
-        </button>
+        {hasPermission('leave_approvals') && (
+          <button
+            onClick={handleOpenAddModal}
+            className="py-2.5 px-5 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl transition-all shadow-md shadow-indigo-500/25 font-khmer border-none outline-none cursor-pointer flex items-center gap-2"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span>Add Approver Rule</span>
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -215,7 +258,7 @@ const ApprovalManage = () => {
         <div className="flex-grow relative">
           <input
             type="text"
-            placeholder="ស្វែងរកអ្នកអនុម័ត ឬបុគ្គលិកគោលដៅ... (Search...)"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full py-2 pl-9 pr-4 bg-slate-950/60 border border-white/10 text-white placeholder-slate-500 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all"
@@ -235,16 +278,18 @@ const ApprovalManage = () => {
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-slate-950/80 text-xs text-slate-300 uppercase border-b border-white/10">
                 <tr>
-                  <th className="py-4 px-6 font-khmer">អ្នកអនុម័ត (Approver)</th>
-                  <th className="py-4 px-6 font-khmer">កម្រិតកំណត់ (Scope Type)</th>
-                  <th className="py-4 px-6 font-khmer">គោលដៅ (Target)</th>
-                  <th className="py-4 px-6 text-right font-khmer">សកម្មភាព (Actions)</th>
+                  <th className="py-4 px-6 font-khmer">Approver</th>
+                  <th className="py-4 px-6 font-khmer">Scope Type</th>
+                  <th className="py-4 px-6 font-khmer">Target</th>
+                  {(hasPermission('edit_leave_approvals') || hasPermission('delete_leave_approvals')) && (
+                    <th className="py-4 px-6 text-right font-khmer">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {filteredRules.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-500 font-khmer">
+                    <td colSpan={(hasPermission('edit_leave_approvals') || hasPermission('delete_leave_approvals')) ? 4 : 3} className="py-6 text-center text-slate-500 font-khmer">
                       មិនទាន់មានច្បាប់កំណត់អ្នកអនុម័តនៅឡើយទេ
                     </td>
                   </tr>
@@ -258,11 +303,10 @@ const ApprovalManage = () => {
                         <p className="text-xs text-indigo-400">ID: {rule.approverId}</p>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                          rule.scope === 'Department' 
-                            ? 'bg-purple-500/10 text-purple-300 ring-purple-500/20' 
-                            : 'bg-indigo-500/10 text-indigo-300 ring-indigo-500/20'
-                        }`}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${rule.scope === 'Department'
+                          ? 'bg-purple-500/10 text-purple-300 ring-purple-500/20'
+                          : 'bg-indigo-500/10 text-indigo-300 ring-indigo-500/20'
+                          }`}>
                           {rule.scope}
                         </span>
                       </td>
@@ -280,15 +324,28 @@ const ApprovalManage = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => handleDelete(rule.id)}
-                          className="inline-flex p-2 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 rounded-xl text-rose-400 transition-colors cursor-pointer"
-                          title="Delete Rule"
-                        >
-                          <TrashIcon className="h-4.5 w-4.5" />
-                        </button>
-                      </td>
+                      {(hasPermission('edit_leave_approvals') || hasPermission('delete_leave_approvals')) && (
+                        <td className="py-4 px-6 text-right space-x-2">
+                          {hasPermission('edit_leave_approvals') && (
+                            <button
+                              onClick={() => handleOpenEditModal(rule)}
+                              className="inline-flex p-2 bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/20 rounded-xl text-indigo-400 transition-colors cursor-pointer mr-2"
+                              title="Edit Rule"
+                            >
+                              <PencilIcon className="h-4.5 w-4.5" />
+                            </button>
+                          )}
+                          {hasPermission('delete_leave_approvals') && (
+                            <button
+                              onClick={() => handleDelete(rule.id)}
+                              className="inline-flex p-2 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 rounded-xl text-rose-400 transition-colors cursor-pointer"
+                              title="Delete Rule"
+                            >
+                              <TrashIcon className="h-4.5 w-4.5" />
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -303,15 +360,16 @@ const ApprovalManage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="glass-card max-w-md w-full rounded-2xl overflow-hidden shadow-2xl glow-indigo border border-white/10">
             <div className="p-6 border-b border-white/5 bg-slate-950/40">
-              <h3 className="text-lg font-bold text-white font-khmer">បន្ថែមច្បាប់អនុម័តច្បាប់សម្រាក</h3>
-              <p className="text-xs text-slate-400 mt-1">កំណត់អ្នកអនុម័តសម្រាប់បុគ្គលិកម្នាក់ៗ ឬដេប៉ាតឺម៉ង់</p>
+              <h3 className="text-lg font-bold text-white font-khmer">
+                {isEditMode ? 'Edit Approval Leave Rule' : 'Manage Approval leave'}
+              </h3>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-4">
                 {/* Select Approver */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">ជ្រើសរើសអ្នកអនុម័ត (Approver)</label>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Select Approver</label>
                   <select
                     value={approverId}
                     onChange={(e) => setApproverId(e.target.value)}
@@ -327,7 +385,7 @@ const ApprovalManage = () => {
 
                 {/* Scope Selection */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">ជម្រើសគ្រប់គ្រង (Scope Type)</label>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Scope Type</label>
                   <div className="flex gap-4 pt-1">
                     <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
                       <input
@@ -336,7 +394,7 @@ const ApprovalManage = () => {
                         onChange={() => setScope('Employee')}
                         className="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>បុគ្គលិកម្នាក់ៗ (Employee)</span>
+                      <span>Persional Employee</span>
                     </label>
                     <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
                       <input
@@ -345,7 +403,7 @@ const ApprovalManage = () => {
                         onChange={() => setScope('Department')}
                         className="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>ជាក្រុម/ដេប៉ាតឺម៉ង់ (Department)</span>
+                      <span>Group/Department</span>
                     </label>
                   </div>
                 </div>
@@ -354,32 +412,33 @@ const ApprovalManage = () => {
                 {scope === 'Employee' ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">ជ្រើសរើសបុគ្គលិកគោលដៅ (Target Employees)</label>
-                      <span className="text-xs text-indigo-400 font-semibold">{targetStaffIds.length} ជ្រើសរើស</span>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase font-khmer">Target Employees</label>
+                      <span className="text-xs text-indigo-400 font-semibold">{targetStaffIds.length} Selected</span>
                     </div>
                     {/* Search within employees */}
                     <input
                       type="text"
-                      placeholder="ស្វែងរកបុគ្គលិក..."
+                      placeholder="Search Employee..."
                       value={empSearch}
                       onChange={(e) => setEmpSearch(e.target.value)}
                       className="w-full py-1.5 px-3 bg-slate-950/80 border border-white/10 text-white placeholder-slate-500 rounded-lg text-xs outline-none focus:border-indigo-500 transition-all"
                     />
                     {/* Select All toggle */}
-                    <div
-                      onClick={toggleSelectAll}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
-                    >
-                      <div className={`w-4 h-4 rounded flex items-center justify-center border-2 transition-all ${
-                        filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId))
+                    {!isEditMode && (
+                      <div
+                        onClick={toggleSelectAll}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
+                      >
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border-2 transition-all ${filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId))
                           ? 'border-indigo-500 bg-indigo-500' : 'border-slate-500'
-                      }`}>
-                        {filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId)) && (
-                          <span className="text-white text-[10px] font-bold">✓</span>
-                        )}
+                          }`}>
+                          {filteredEmpList.length > 0 && filteredEmpList.every(e => targetStaffIds.includes(e.staffId)) && (
+                            <span className="text-white text-[10px] font-bold">✓</span>
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-300 font-khmer">Select All</span>
                       </div>
-                      <span className="text-xs font-semibold text-slate-300 font-khmer">ជ្រើសរើសទាំងអស់ (Select All)</span>
-                    </div>
+                    )}
                     {/* Scrollable employee list */}
                     <div className="max-h-48 overflow-y-auto rounded-xl border border-white/10 divide-y divide-white/5 bg-slate-950/60">
                       {filteredEmpList.length === 0 ? (
@@ -391,13 +450,11 @@ const ApprovalManage = () => {
                             <div
                               key={emp.staffId}
                               onClick={() => toggleEmployeeSelection(emp.staffId)}
-                              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
-                                selected ? 'bg-indigo-500/15' : 'hover:bg-white/5'
-                              }`}
+                              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${selected ? 'bg-indigo-500/15' : 'hover:bg-white/5'
+                                }`}
                             >
-                              <div className={`w-4 h-4 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${
-                                selected ? 'border-indigo-500 bg-indigo-500' : 'border-slate-500'
-                              }`}>
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${selected ? 'border-indigo-500 bg-indigo-500' : 'border-slate-500'
+                                }`}>
                                 {selected && <span className="text-white text-[10px] font-bold">✓</span>}
                               </div>
                               <div className="min-w-0">
@@ -444,7 +501,7 @@ const ApprovalManage = () => {
                   disabled={saving}
                   className="py-2 px-4 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all font-khmer cursor-pointer border-none outline-none disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : t("save")}
+                  {saving ? 'Saving...' : isEditMode ? 'Update' : t("save")}
                 </button>
               </div>
             </form>

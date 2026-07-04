@@ -106,9 +106,9 @@ const WorkHours = () => {
           <ClockIcon className="h-6 w-6 text-indigo-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white font-khmer">ម៉ោងការងារលំនាំដើមរបស់ក្រុមហ៊ុន (Company Work Hours)</h1>
+          <h1 className="text-xl font-bold text-white font-khmer">Company Work Hours</h1>
           <p className="text-xs text-slate-400 mt-0.5 font-khmer">
-            កំណត់ម៉ោងចូល/ចេញការងារលំនាំដើមសម្រាប់ក្រុមហ៊ុនទាំងមូល ដើម្បីងាយស្រួលបង្កើតគណនីបុគ្គលិកថ្មីៗ។
+
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ const WorkHours = () => {
       {/* Main Settings Card */}
       <div className="glass-card p-6 rounded-2xl glow-indigo space-y-6">
         <h2 className="text-sm font-bold text-white border-b border-white/5 pb-2 font-khmer">
-          ⏱️ កំណត់ម៉ោងការងារ (Work Shifts Configuration)
+          Work Shifts Configuration
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -138,11 +138,11 @@ const WorkHours = () => {
               <h3 className="text-xs font-bold text-indigo-300 font-khmer tracking-wider uppercase">
                 {t("shift1")} (Morning)
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1 font-khmer">
-                    ម៉ោងចូល (Start Time)
+                    Start Time
                   </label>
                   <input
                     type="time"
@@ -155,7 +155,7 @@ const WorkHours = () => {
 
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1 font-khmer">
-                    ម៉ោងចេញ (End Time)
+                    End Time
                   </label>
                   <input
                     type="time"
@@ -173,11 +173,11 @@ const WorkHours = () => {
               <h3 className="text-xs font-bold text-indigo-300 font-khmer tracking-wider uppercase">
                 {t("shift2")} (Afternoon)
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1 font-khmer">
-                    ម៉ោងចូល (Start Time)
+                    Start Time
                   </label>
                   <input
                     type="time"
@@ -190,7 +190,7 @@ const WorkHours = () => {
 
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1 font-khmer">
-                    ម៉ោងចេញ (End Time)
+                    End Time
                   </label>
                   <input
                     type="time"
@@ -225,7 +225,7 @@ const WorkHours = () => {
                   <span>Saving...</span>
                 </>
               ) : (
-                <span>រក្សាទុកការផ្លាស់ប្ដូរ (Save Settings)</span>
+                <span>Save Settings</span>
               )}
             </button>
           </div>

@@ -170,10 +170,8 @@ const LeaveTypes = () => {
             <Cog6ToothIcon className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-khmer">ការកំណត់ប្រភេទច្បាប់ (Types)</h1>
-            <p className="text-xs text-slate-400 mt-0.5 font-khmer">
-              បង្កើត កែប្រែ ឬលុបប្រភេទច្បាប់សម្រាប់បុគ្គលិកប្រើប្រាស់។
-            </p>
+            <h1 className="text-xl font-bold text-white font-khmer">Leav Types</h1>
+
           </div>
         </div>
 
@@ -182,7 +180,7 @@ const LeaveTypes = () => {
           className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md shadow-indigo-500/20 rounded-xl cursor-pointer transition-all border-none outline-none font-khmer"
         >
           <PlusIcon className="h-4 w-4" />
-          <span>បន្ថែមប្រភេទច្បាប់ (Add Type)</span>
+          <span>Add Type</span>
         </button>
       </div>
 
@@ -208,19 +206,19 @@ const LeaveTypes = () => {
                   Code
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer">
-                  ឈ្មោះច្បាប់ (ខ្មែរ)
+                  Khmer Name
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer">
                   English Name
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer text-center w-36">
-                  ចំនួនថ្ងៃអនុញ្ញាត (Max Days)
+                  Max Days
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer">
                   Description
                 </th>
                 <th className="py-4 px-6 text-xs font-bold text-slate-400 uppercase tracking-wider font-khmer text-center w-28">
-                  សកម្មភាព
+                  Action
                 </th>
               </tr>
             </thead>
@@ -237,7 +235,7 @@ const LeaveTypes = () => {
                     {type.nameEn}
                   </td>
                   <td className="py-4 px-6 text-center text-indigo-300 text-sm font-bold font-mono">
-                    {parseFloat(type.maxDays).toFixed(1)} ថ្ងៃ
+                    {parseFloat(type.maxDays).toFixed(1)} day
                   </td>
                   <td className="py-4 px-6 text-slate-400 text-xs max-w-sm truncate font-khmer">
                     {type.description || '-'}
