@@ -49,17 +49,14 @@ export const determineAutoAction = (employee, existingAttendance, timeString) =>
   const checkin2 = existingAttendance?.checkin2;
   const checkout2 = existingAttendance?.checkout2;
 
-  // Define checkout 1 start threshold (e.g. 30 minutes before shift ends)
-  const checkout1Start = s1EndMinutes - 30;
-
   // 1. If we already checked in 2 but haven't checked out 2
   if (checkin2 && !checkout2) {
     return 'checkout_2';
   }
 
   // 2. If we are in the Shift 2 window or have already finished Shift 1
-  const isPastShift1Checkin = currentMinutes >= checkout1Start;
-  if (checkout1 || (isPastShift1Checkin && !checkin1)) {
+  const isPastShift1 = currentMinutes >= s1EndMinutes;
+  if (checkout1 || (isPastShift1 && !checkin1)) {
     if (!checkin2) {
       return 'checkin_2';
     }
@@ -78,8 +75,8 @@ export const determineAutoAction = (employee, existingAttendance, timeString) =>
     }
   }
 
-  // 4. If we haven't checked in 1 and we are before checkout 1 start
-  if (!checkin1 && currentMinutes < checkout1Start) {
+  // 4. If we haven't checked in 1 and we are before shift 1 end
+  if (!checkin1 && currentMinutes < s1EndMinutes) {
     return 'checkin_1';
   }
 

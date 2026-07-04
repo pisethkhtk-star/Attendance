@@ -131,14 +131,11 @@ const Kiosk = () => {
       const checkin2 = todayRec?.checkin2;
       const checkout2 = todayRec?.checkout2;
 
-      // Define checkout 1 start threshold (e.g. 30 minutes before shift ends)
-      const checkout1Start = s1EndMinutes - 30;
-
       let determinedAction = 'checkin_1';
 
       if (checkin2 && !checkout2) {
         determinedAction = 'checkout_2';
-      } else if (checkout1 || (currentMinutes >= checkout1Start && !checkin1)) {
+      } else if (checkout1 || (currentMinutes >= s1EndMinutes && !checkin1)) {
         if (!checkin2) {
           determinedAction = 'checkin_2';
         } else {
@@ -155,7 +152,7 @@ const Kiosk = () => {
             determinedAction = 'completed';
           }
         }
-      } else if (!checkin1 && currentMinutes < checkout1Start) {
+      } else if (!checkin1 && currentMinutes < s1EndMinutes) {
         determinedAction = 'checkin_1';
       } else {
         // Fallback sequential checks
