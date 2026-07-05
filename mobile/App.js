@@ -480,14 +480,15 @@ export default function App() {
 
       const { latitude, longitude } = locationRes.coords;
 
-      const endpoint = data.startsWith('branch_qr:')
+      const cleanData = (data || '').trim();
+      const endpoint = cleanData.startsWith('branch_qr:')
         ? `${apiUrl}/qrcode/scan-branch`
         : `${apiUrl}/qrcode/scan`;
 
       const response = await axios.post(
         endpoint,
         {
-          qrToken: data,
+          qrToken: cleanData,
           deviceInfo: 'Expo Mobile App',
           location: 'Mobile Geofence App',
           latitude,

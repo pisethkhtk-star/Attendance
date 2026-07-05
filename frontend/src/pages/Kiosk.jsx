@@ -15,6 +15,15 @@ const Kiosk = () => {
   const { user, hasPermission } = useAuth(); // destructure user and hasPermission for permission-guarded UI
   const [activeTab, setActiveTab] = useState('face'); // face, qrcode
 
+  // Set default active tab based on permissions
+  useEffect(() => {
+    if (!hasPermission('facescan') && hasPermission('qrscan')) {
+      setActiveTab('qrcode');
+    } else if (hasPermission('facescan')) {
+      setActiveTab('face');
+    }
+  }, [hasPermission]);
+
   // Real-time Clock State
   const [timeStr, setTimeStr] = useState('');
   const [dateStr, setDateStr] = useState('');
@@ -407,7 +416,9 @@ const Kiosk = () => {
 
   // Process QR Code Scans
   const handleQrScan = async (decodedText) => {
-    if (scanLock) return;
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
+    setScanLock(true);
     if (!coords) {
       playSound('error');
       setScanError('កំពុងស្វែងរកទីតាំង GPS... សូមរង់ចាំមួយភ្លែត ឬបើក Location Access លើ browser (Acquiring location...)');
@@ -579,10 +590,10 @@ const Kiosk = () => {
         return;
       }
 
-      if (activeTab === 'face') {
+      if (activeTab === 'face' && hasPermission('facescan')) {
         await stopQrScanner();
         startFaceRecognition();
-      } else {
+      } else if (activeTab === 'qrcode' && hasPermission('qrscan')) {
         stopFaceRecognition();
         setTimeout(() => {
           startQrScanner();
@@ -691,28 +702,30 @@ const Kiosk = () => {
         )}
 
         {/* Tab Selector */}
-        <div className="flex border-b border-white/10 w-full">
-          <button
-            onClick={() => setActiveTab('face')}
-            className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold text-sm transition-all cursor-pointer font-khmer border-none outline-none ${activeTab === 'face'
-              ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
-              : 'text-slate-400 hover:text-white'
-              }`}
-          >
-            <CameraIcon className="h-5 w-5" />
-            Face Scan
-          </button>
-          <button
-            onClick={() => setActiveTab('qrcode')}
-            className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold text-sm transition-all cursor-pointer font-khmer border-none outline-none ${activeTab === 'qrcode'
-              ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
-              : 'text-slate-400 hover:text-white'
-              }`}
-          >
-            <QrCodeIcon className="h-5 w-5" />
-            QR Scan
-          </button>
-        </div>
+        {hasPermission('facescan') && hasPermission('qrscan') && (
+          <div className="flex border-b border-white/10 w-full">
+            <button
+              onClick={() => setActiveTab('face')}
+              className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold text-sm transition-all cursor-pointer font-khmer border-none outline-none ${activeTab === 'face'
+                ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              <CameraIcon className="h-5 w-5" />
+              Face Scan
+            </button>
+            <button
+              onClick={() => setActiveTab('qrcode')}
+              className={`flex-1 py-4 flex items-center justify-center gap-2 font-semibold text-sm transition-all cursor-pointer font-khmer border-none outline-none ${activeTab === 'qrcode'
+                ? 'bg-indigo-500/10 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              <QrCodeIcon className="h-5 w-5" />
+              QR Scan
+            </button>
+          </div>
+        )}
 
         {/* Scanning Window Frame */}
         <div className="p-6 w-full flex flex-col items-center">

@@ -128,7 +128,7 @@ function App() {
               <Route
                 path="kiosk"
                 element={
-                  <ProtectedRoute resource="kiosk">
+                  <ProtectedRoute resource={["facescan", "qrscan"]}>
                     <Kiosk />
                   </ProtectedRoute>
                 }

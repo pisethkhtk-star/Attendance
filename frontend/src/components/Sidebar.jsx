@@ -93,7 +93,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: "/kiosk",
       name: t("facescan"),
       icon: ComputerDesktopIcon,
-      resource: "kiosk",
+      resource: ["facescan", "qrscan"],
     },
     {
       path: "/kiosk-settings",
@@ -114,6 +114,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     if (item.subItems) {
       const allowedSubItems = item.subItems.filter(sub => {
         if (!sub.resource) return true;
+        if (Array.isArray(sub.resource)) {
+          return sub.resource.some(res => hasPermission(res));
+        }
         return hasPermission(sub.resource);
       });
       if (allowedSubItems.length > 0) {
@@ -123,6 +126,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     }
     if (item.adminOnly) return user?.role === 'Admin' ? item : null;
     if (!item.resource) return item;
+    if (Array.isArray(item.resource)) {
+      return item.resource.some(res => hasPermission(res)) ? item : null;
+    }
     return hasPermission(item.resource) ? item : null;
   }).filter(Boolean);
 

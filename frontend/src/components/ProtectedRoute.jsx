@@ -24,8 +24,12 @@ const ProtectedRoute = ({ children, roles, resource }) => {
     return <Navigate to="/" replace />;
   }
 
-  if (resource && !hasPermission(resource)) {
-    return <Navigate to="/" replace />;
+  if (resource) {
+    const resources = Array.isArray(resource) ? resource : [resource];
+    const isAllowed = resources.some(res => hasPermission(res));
+    if (!isAllowed) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;

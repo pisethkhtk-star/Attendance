@@ -31,6 +31,8 @@ export const getLocalTimeDetails = (customTime, customDate) => {
   };
 };
 
+
+
 // Convert "HH:mm" string to minutes from midnight
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return 0;
@@ -43,14 +45,24 @@ export const determineAutoAction = (employee, existingAttendance, timeString) =>
   const currentMinutes = timeToMinutes(timeString);
   const s1EndMinutes = timeToMinutes(employee.shift1End);
   const s2StartMinutes = timeToMinutes(employee.shift2Start);
-  
+  const s2EndMinutes = employee.shift2End ? timeToMinutes(employee.shift2End) : 1020;
+
   const checkin1 = existingAttendance?.checkin1;
   const checkout1 = existingAttendance?.checkout1;
   const checkin2 = existingAttendance?.checkin2;
   const checkout2 = existingAttendance?.checkout2;
 
-  // 1. If we already checked in 2 but haven't checked out 2
-  if (checkin2 && !checkout2) {
+  // If we already checked in today (either checkin1 or checkin2) and it is late in the day (e.g. past shift 2 end - 120 mins),
+  // we should treat the scan as checkout_2 rather than starting a new checkin.
+  const isLateDay = currentMinutes >= (s2EndMinutes - 120);
+  if (isLateDay && (checkin1 || checkin2) && !checkout2) {
+    if (!checkin2 || currentMinutes > timeToMinutes(checkin2)) {
+      return 'checkout_2';
+    }
+  }
+
+  // 1. If we already checked in 2 but haven't checked out 2 (enforce that current time is after checkin2)
+  if (checkin2 && currentMinutes > timeToMinutes(checkin2) && !checkout2) {
     return 'checkout_2';
   }
 
@@ -82,8 +94,11 @@ export const determineAutoAction = (employee, existingAttendance, timeString) =>
 
   // Fallbacks
   if (!checkin1) return 'checkin_1';
+  if (checkin1 && currentMinutes <= timeToMinutes(checkin1)) return 'checkin_1';
   if (!checkout1) return 'checkout_1';
+  if (checkout1 && currentMinutes <= timeToMinutes(checkout1)) return 'checkout_1';
   if (!checkin2) return 'checkin_2';
+  if (checkin2 && currentMinutes <= timeToMinutes(checkin2)) return 'checkin_2';
   return 'checkout_2';
 };
 
@@ -170,6 +185,7 @@ export const processAttendanceScan = async ({ staffId, action: requestedAction, 
     include: {
       employee: {
         select: {
+          staffId: true,
           nameEn: true,
           nameKh: true,
           branch: true,

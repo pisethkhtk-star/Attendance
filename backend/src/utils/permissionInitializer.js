@@ -4,6 +4,11 @@ export const initializePermissions = async () => {
   try {
     console.log('Initializing role permissions...');
 
+    // Clean up old 'kiosk' resource permission if it exists
+    await prisma.rolePermission.deleteMany({
+      where: { resource: 'kiosk' }
+    });
+
     const defaultPermissions = [
       // Admin permissions
       { role: 'Admin', resource: 'departments', canAccess: true },
@@ -15,7 +20,8 @@ export const initializePermissions = async () => {
       { role: 'Admin', resource: 'delete_attendance', canAccess: true },
       { role: 'Admin', resource: 'leaves', canAccess: true },
       { role: 'Admin', resource: 'reports', canAccess: true },
-      { role: 'Admin', resource: 'kiosk', canAccess: true },
+      { role: 'Admin', resource: 'facescan', canAccess: true },
+      { role: 'Admin', resource: 'qrscan', canAccess: true },
       { role: 'Admin', resource: 'kiosk_settings', canAccess: true },
       { role: 'Admin', resource: 'leave_types', canAccess: true },
       { role: 'Admin', resource: 'leave_allowances', canAccess: true },
@@ -38,7 +44,8 @@ export const initializePermissions = async () => {
       { role: 'HR', resource: 'delete_attendance', canAccess: true },
       { role: 'HR', resource: 'leaves', canAccess: true },
       { role: 'HR', resource: 'reports', canAccess: true },
-      { role: 'HR', resource: 'kiosk', canAccess: true },
+      { role: 'HR', resource: 'facescan', canAccess: true },
+      { role: 'HR', resource: 'qrscan', canAccess: true },
       { role: 'HR', resource: 'kiosk_settings', canAccess: false },
       { role: 'HR', resource: 'leave_types', canAccess: true },
       { role: 'HR', resource: 'leave_allowances', canAccess: true },
@@ -61,7 +68,8 @@ export const initializePermissions = async () => {
       { role: 'Manager', resource: 'delete_attendance', canAccess: false },
       { role: 'Manager', resource: 'leaves', canAccess: true },
       { role: 'Manager', resource: 'reports', canAccess: true },
-      { role: 'Manager', resource: 'kiosk', canAccess: true },
+      { role: 'Manager', resource: 'facescan', canAccess: true },
+      { role: 'Manager', resource: 'qrscan', canAccess: true },
       { role: 'Manager', resource: 'kiosk_settings', canAccess: false },
       { role: 'Manager', resource: 'leave_types', canAccess: false },
       { role: 'Manager', resource: 'leave_allowances', canAccess: false },
@@ -84,7 +92,8 @@ export const initializePermissions = async () => {
       { role: 'Employee', resource: 'delete_attendance', canAccess: false },
       { role: 'Employee', resource: 'leaves', canAccess: true },
       { role: 'Employee', resource: 'reports', canAccess: false },
-      { role: 'Employee', resource: 'kiosk', canAccess: false },
+      { role: 'Employee', resource: 'facescan', canAccess: false },
+      { role: 'Employee', resource: 'qrscan', canAccess: false },
       { role: 'Employee', resource: 'kiosk_settings', canAccess: false },
       { role: 'Employee', resource: 'leave_types', canAccess: false },
       { role: 'Employee', resource: 'leave_allowances', canAccess: false },

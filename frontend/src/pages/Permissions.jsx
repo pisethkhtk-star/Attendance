@@ -62,7 +62,8 @@ const Permissions = () => {
       key: 'kiosk_group',
       label: 'Facescan Kiosk & Settings (ម៉ាស៊ីនស្កេនផ្ទៃមុខ & ទីតាំង)',
       children: [
-        { key: 'kiosk', label: 'Facescan Mode (ម៉ាស៊ីនស្កេនផ្ទៃមុខ)' },
+        { key: 'facescan', label: 'Facescan Mode (ម៉ាស៊ីនស្កេនផ្ទៃមុខ)' },
+        { key: 'qrscan', label: 'QRscan Mode (ម៉ាស៊ីនស្កេន QR Code)' },
         { key: 'kiosk_settings', label: 'Branch Settings (កំណត់ទីតាំងសាខា)' }
       ]
     },

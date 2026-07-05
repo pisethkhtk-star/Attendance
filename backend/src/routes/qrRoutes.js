@@ -8,7 +8,7 @@ const router = express.Router();
 // Define scan rate limit to prevent spamming/replay attacks
 const scanLimiter = rateLimit({
   windowMs: 5 * 1000, // 5 seconds window
-  max: 3, // limit each IP to 3 requests per windowMs
+  max: 20, // limit each IP to 20 requests per windowMs
   message: { message: 'Too many scans from this device. Please wait a few seconds.' },
   standardHeaders: true,
   legacyHeaders: false,

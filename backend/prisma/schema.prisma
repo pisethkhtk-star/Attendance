@@ -172,7 +172,7 @@ model AttendanceLog {
 model RolePermission {
   id        String   @id @default(uuid()) @db.Uuid
   role      Role
-  resource  String   // e.g. "departments", "positions", "employees", "attendance", "leaves", "reports", "kiosk"
+  resource  String   // e.g. "departments", "positions", "employees", "attendance", "leaves", "reports", "facescan", "qrscan"
   canAccess Boolean  @default(true) @map("can_access")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

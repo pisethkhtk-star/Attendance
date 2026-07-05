@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import QRCodeLib from 'qrcode';
+import jwt from 'jsonwebtoken';
 import prisma from '../utils/db.js';
 import { processAttendanceScan } from '../utils/attendanceHelper.js';
 
@@ -15,7 +16,9 @@ export const generateSecureToken = (staffId) => {
 // Validate signature token
 export const verifySecureToken = (token) => {
   try {
-    const [staffId, signature] = token.split('.');
+    if (!token) return null;
+    const cleanToken = token.trim();
+    const [staffId, signature] = cleanToken.split('.');
     if (!staffId || !signature) return null;
 
     const hmac = crypto.createHmac('sha256', SECRET_KEY);
@@ -107,8 +110,31 @@ export const scanQRCode = async (req, res) => {
   }
 
   try {
+    const cleanToken = qrToken.trim();
+
+    // Fallback: If it's a branch QR token, handle it as a branch QR scan
+    if (cleanToken.startsWith('branch_qr:')) {
+      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+          const jwtToken = req.headers.authorization.split(' ')[1];
+          const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET || 'attendance_secret_hash_key_123');
+          const employee = await prisma.employee.findUnique({
+            where: { id: decoded.id }
+          });
+          if (employee) {
+            req.user = employee;
+            req.body.qrToken = cleanToken;
+            return scanBranchQRCode(req, res);
+          }
+        } catch (authError) {
+          console.error('Failed to authenticate branch QR scan via fallback:', authError);
+        }
+      }
+      return res.status(401).json({ success: false, message: 'Authentication token is required or invalid for branch QR scanning' });
+    }
+
     // 1. Verify token signature
-    const staffId = verifySecureToken(qrToken);
+    const staffId = verifySecureToken(cleanToken);
     if (!staffId) {
       return res.status(400).json({ success: false, message: 'Invalid QR signature or corrupted data' });
     }
@@ -148,7 +174,7 @@ export const scanQRCode = async (req, res) => {
 
       // Filter geofence zones matching employee's branch assignment
       const allowedSettingsList = settingsList.filter(setting =>
-        employeeBranches.includes(setting.name.toLowerCase())
+        employeeBranches.includes(setting.name.trim().toLowerCase())
       );
 
       if (allowedSettingsList.length === 0) {
@@ -286,11 +312,13 @@ export const scanBranchQRCode = async (req, res) => {
     return res.status(400).json({ message: 'QR token is required' });
   }
 
-  if (!qrToken.startsWith('branch_qr:')) {
+  const cleanToken = qrToken.trim();
+
+  if (!cleanToken.startsWith('branch_qr:')) {
     return res.status(400).json({ success: false, message: 'Invalid Branch QR code format' });
   }
 
-  const branchId = qrToken.replace('branch_qr:', '');
+  const branchId = cleanToken.replace('branch_qr:', '').trim();
   const staffId = req.user.staffId;
 
   try {
@@ -335,7 +363,7 @@ export const scanBranchQRCode = async (req, res) => {
       ? employee.branch.split(',').map(b => b.trim().toLowerCase())
       : [];
 
-    if (!employeeBranches.includes(branch.name.toLowerCase())) {
+    if (!employeeBranches.includes(branch.name.trim().toLowerCase())) {
       return res.status(403).json({
         success: false,
         message: `គណនីរបស់អ្នកមិនទាន់ត្រូវបានកំណត់ឱ្យចុះវត្តមាននៅសាខា "${branch.name}" ឡើយ!`
